@@ -1,0 +1,78 @@
+import { useMaterials } from '../hooks/useMaterials';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/Table';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+
+export const MaterialList = () => {
+    const { materials, deleteMaterial } = useMaterials();
+
+    if (!materials || materials.length === 0) {
+        return (
+            <div className="text-center py-12 text-muted-foreground bg-card/20 border-2 border-dashed border-border rounded-2xl">
+                <p>登録された材料がありません</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 animate-in">
+            <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-foreground">登録済み材料</h3>
+                <span className="text-xs text-muted-foreground font-medium">{materials.length} 件の材料</span>
+            </div>
+
+            <Card className="bg-card/50 border-border p-0">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-background border-none">
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead className="py-4">名前</TableHead>
+                                <TableHead>カテゴリ</TableHead>
+                                <TableHead className="text-right">仕入詳細</TableHead>
+                                <TableHead className="text-right">基準単価</TableHead>
+                                <TableHead className="w-[60px]"></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {materials.map((material) => (
+                                <TableRow key={material.id} className="border-border hover:bg-muted/50">
+                                    <TableCell className="font-bold text-foreground py-4">{material.name}</TableCell>
+                                    <TableCell>
+                                        <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium">
+                                            {material.category || '未分類'}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-xs">
+                                        {material.purchase_price}円 / {material.purchase_quantity}{material.base_unit}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <span className="text-base font-black text-foreground">{material.calculated_unit_price?.toFixed(3)}</span>
+                                        <span className="text-[10px] ml-1 text-muted-foreground font-bold">円/{material.base_unit}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => {
+                                                if (confirm(`${material.name} を削除しますか？`)) {
+                                                    deleteMaterial(material.id)
+                                                }
+                                            }}
+                                            className="text-muted-foreground hover:text-destructive"
+                                        >
+                                            <TrashIcon className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+const TrashIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
+);
