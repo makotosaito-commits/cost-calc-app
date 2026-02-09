@@ -20,19 +20,28 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
     const [usageDrafts, setUsageDrafts] = useState<Record<string, string>>({});
     const [activeUsageId, setActiveUsageId] = useState<string | null>(null);
 
-    const normalizeUsageInput = (raw: string) => {
-        const cleaned = raw.replace(/,/g, '').replace(/[^\d.]/g, '');
-        const [integerPart, ...decimalParts] = cleaned.split('.');
-        if (decimalParts.length === 0) {
-            return integerPart;
-        }
-        return `${integerPart}.${decimalParts.join('')}`;
+    const normalizeBaseUnit = (unit?: string) => {
+        if (!unit) return 'g';
+        const lower = unit.toLowerCase();
+        if (lower === 'kg') return 'g';
+        if (lower === 'l') return 'ml';
+        return unit;
     };
+
+    const getMaterialUnitPrice = (material?: Material) => {
+        if (!material) return 0;
+        const normalizedQty = normalizeAmount(toSafeNumber(material.purchase_quantity), material.base_unit);
+        if (normalizedQty > 0) {
+            return calculateUnitPrice(toSafeNumber(material.purchase_price), normalizedQty);
+        }
+        return toSafeNumber(material.calculated_unit_price);
+    };
+
+    const normalizeUsageInput = (raw: string) => raw.replace(/[^\d]/g, '');
 
     const handleUsageChange = (recipeId: string, raw: string) => {
         const normalized = normalizeUsageInput(raw);
         setUsageDrafts((prev) => ({ ...prev, [recipeId]: normalized }));
-        void updateRecipe(recipeId, { usage_amount: normalized === '' ? 0 : toSafeNumber(normalized) });
     };
 
     const handleUsageBlur = (recipeId: string) => {
@@ -40,17 +49,6 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
         const raw = usageDrafts[recipeId] ?? '';
         void updateRecipe(recipeId, { usage_amount: raw === '' ? 0 : toSafeNumber(raw) });
     };
-
-    useEffect(() => {
-        recipes.forEach((recipe) => {
-            if (recipe.usage_unit === 'kg') {
-                updateRecipe(recipe.id, { usage_amount: recipe.usage_amount * 1000, usage_unit: 'g' });
-            }
-            if (recipe.usage_unit === 'L') {
-                updateRecipe(recipe.id, { usage_amount: recipe.usage_amount * 1000, usage_unit: 'ml' });
-            }
-        });
-    }, [recipes, updateRecipe]);
 
     useEffect(() => {
         setUsageDrafts((prev) => {
@@ -67,12 +65,26 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
     }, [recipes, activeUsageId]);
 
     useEffect(() => {
+        recipes.forEach((recipe) => {
+            const material = materials.find((m) => m.id === recipe.material_id);
+            if (!material) return;
+            const fixedUnit = normalizeBaseUnit(material.base_unit);
+            if (recipe.usage_unit !== fixedUnit) {
+                void updateRecipe(recipe.id, { usage_unit: fixedUnit });
+            }
+        });
+    }, [recipes, materials, updateRecipe]);
+
+    useEffect(() => {
         let total = 0;
         recipes.forEach(recipe => {
             const material = materials.find(m => m.id === recipe.material_id);
             const unitPrice = getMaterialUnitPrice(material);
+            const usageAmount = activeUsageId === recipe.id
+                ? toSafeNumber(usageDrafts[recipe.id] ?? '0')
+                : toSafeNumber(recipe.usage_amount);
             const cost = calculateLineCost(
-                toSafeNumber(recipe.usage_amount),
+                usageAmount,
                 recipe.usage_unit,
                 100,
                 unitPrice
@@ -80,7 +92,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
             total += cost;
         });
         onTotalCostChange(total);
-    }, [recipes, materials, onTotalCostChange]);
+    }, [recipes, materials, usageDrafts, activeUsageId, onTotalCostChange]);
 
     const handleAddWithMaterial = async () => {
         if (!selectedMaterialId) return;
@@ -131,8 +143,11 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                         {recipes.map((recipe) => {
                             const material = materials.find(m => m.id === recipe.material_id);
                             const unitPrice = getMaterialUnitPrice(material);
+                            const usageAmount = activeUsageId === recipe.id
+                                ? toSafeNumber(usageDrafts[recipe.id] ?? '0')
+                                : toSafeNumber(recipe.usage_amount);
                             const lineCost = calculateLineCost(
-                                toSafeNumber(recipe.usage_amount),
+                                usageAmount,
                                 recipe.usage_unit,
                                 100,
                                 unitPrice
@@ -163,7 +178,8 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                                 <p className="text-[10px] text-muted-foreground">使用量</p>
                                                 <Input
                                                     type="text"
-                                                    inputMode="decimal"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
                                                     className="h-9 w-[96px] text-center bg-background border-border focus:border-foreground"
                                                     value={usageDrafts[recipe.id] ?? ''}
                                                     onFocus={() => setActiveUsageId(recipe.id)}
@@ -173,15 +189,9 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                             </div>
                                             <div className="space-y-1">
                                                 <p className="text-[10px] text-muted-foreground">単位</p>
-                                                <select
-                                                    className="h-9 w-[72px] rounded-xl border border-input bg-background text-sm text-center focus:ring-2 focus:ring-ring outline-none"
-                                                    value={recipe.usage_unit}
-                                                    onChange={(e) => updateRecipe(recipe.id, { usage_unit: e.target.value })}
-                                                >
-                                                    <option value="g">g</option>
-                                                    <option value="ml">ml</option>
-                                                    <option value="個">個</option>
-                                                </select>
+                                                <div className="h-9 min-w-[72px] rounded-xl border border-input bg-muted/40 px-3 flex items-center justify-center text-sm text-foreground">
+                                                    {normalizeBaseUnit(material?.base_unit)}
+                                                </div>
                                             </div>
                                         </div>
 
@@ -216,8 +226,11 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                 {recipes.map((recipe) => {
                                     const material = materials.find(m => m.id === recipe.material_id);
                                     const unitPrice = getMaterialUnitPrice(material);
+                                    const usageAmount = activeUsageId === recipe.id
+                                        ? toSafeNumber(usageDrafts[recipe.id] ?? '0')
+                                        : toSafeNumber(recipe.usage_amount);
                                     const lineCost = calculateLineCost(
-                                        toSafeNumber(recipe.usage_amount),
+                                        usageAmount,
                                         recipe.usage_unit,
                                         100,
                                         unitPrice
@@ -234,7 +247,8 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                             <TableCell>
                                                 <Input
                                                     type="text"
-                                                    inputMode="decimal"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
                                                     className="h-9 w-[100px] mx-auto text-center bg-background border-border focus:border-foreground"
                                                     value={usageDrafts[recipe.id] ?? ''}
                                                     onFocus={() => setActiveUsageId(recipe.id)}
@@ -242,16 +256,8 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                                     onChange={(e) => handleUsageChange(recipe.id, e.target.value)}
                                                 />
                                             </TableCell>
-                                            <TableCell>
-                                                <select
-                                                    className="h-9 w-full rounded-xl border border-input bg-background text-sm text-center focus:ring-2 focus:ring-ring outline-none"
-                                                    value={recipe.usage_unit}
-                                                    onChange={(e) => updateRecipe(recipe.id, { usage_unit: e.target.value })}
-                                                >
-                                                    <option value="g">g</option>
-                                                    <option value="ml">ml</option>
-                                                    <option value="個">個</option>
-                                                </select>
+                                            <TableCell className="text-center font-medium text-foreground">
+                                                {normalizeBaseUnit(material?.base_unit)}
                                             </TableCell>
                                             <TableCell className="text-right font-black text-foreground">
                                                 {Math.round(lineCost).toLocaleString()}
@@ -281,19 +287,3 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
 const TrashIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
 );
-    const normalizeBaseUnit = (unit?: string) => {
-        if (!unit) return 'g';
-        const lower = unit.toLowerCase();
-        if (lower === 'kg') return 'g';
-        if (lower === 'l') return 'ml';
-        return unit;
-    };
-
-    const getMaterialUnitPrice = (material?: Material) => {
-        if (!material) return 0;
-        const normalizedQty = normalizeAmount(toSafeNumber(material.purchase_quantity), material.base_unit);
-        if (normalizedQty > 0) {
-            return calculateUnitPrice(toSafeNumber(material.purchase_price), normalizedQty);
-        }
-        return toSafeNumber(material.calculated_unit_price);
-    };

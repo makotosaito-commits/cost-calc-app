@@ -33,11 +33,17 @@
   }
 
   html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
     touch-action: pan-x pan-y;
     -webkit-text-size-adjust: 100%;
   }
 
   body {
+    margin: 0;
+    padding: 0;
+    min-height: 100dvh;
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
     letter-spacing: 0.01em;
@@ -45,6 +51,10 @@
     -webkit-user-select: none;
     user-select: none;
     overscroll-behavior: none;
+  }
+
+  #root {
+    min-height: 100dvh;
   }
 }
 

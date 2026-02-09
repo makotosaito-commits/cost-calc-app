@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Menu } from '../types';
 
+import { useCostRateSettings } from '../contexts/CostRateSettingsContext';
 import { Input } from './ui/Input';
 import { Card, CardContent } from './ui/Card';
 import { calculateMenuMetrics, toSafeNumber } from '../lib/calculator';
+import { evaluateCostRate } from '../lib/costRateSettings';
 
 interface MenuDetailProps {
     menu: Menu;
@@ -12,6 +14,7 @@ interface MenuDetailProps {
 }
 
 export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailProps) => {
+    const { settings } = useCostRateSettings();
     const [name, setName] = useState(menu.name);
     const [salesPrice, setSalesPrice] = useState<number | null>(toSafeNumber(menu.sales_price) > 0 ? toSafeNumber(menu.sales_price) : null);
     const [image, setImage] = useState<string | undefined>(menu.image);
@@ -40,16 +43,19 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
         }
     };
 
-    const hasSalesPrice = salesPrice !== null;
+    const hasSalesPrice = salesPrice !== null && salesPrice > 0;
     const { grossProfit, costRate } = calculateMenuMetrics(salesPrice ?? 0, calculatedTotalCost);
-    const rateToneClass = !hasSalesPrice
+    const evaluated = evaluateCostRate(costRate, salesPrice ?? 0, settings);
+    const safeTotalCost = Number.isFinite(calculatedTotalCost) ? Math.round(calculatedTotalCost) : null;
+    const safeGrossProfit = hasSalesPrice && Number.isFinite(grossProfit) ? Math.round(grossProfit) : null;
+    const rateToneClass = evaluated.tone === 'none'
         ? 'text-muted-foreground border-border bg-muted/40'
-        : costRate <= 30
+        : evaluated.tone === 'good'
             ? 'text-zinc-700 border-zinc-400/50 bg-zinc-100'
-            : costRate <= 45
+            : evaluated.tone === 'warn'
                 ? 'text-zinc-800 border-zinc-500/50 bg-zinc-200'
                 : 'text-zinc-900 border-zinc-600/60 bg-zinc-300';
-    const rateLabel = !hasSalesPrice ? '未入力' : (costRate <= 30 ? '良好' : (costRate <= 45 ? '注意' : '高い'));
+    const rateLabel = evaluated.label ?? '未入力';
 
     return (
         <div className="space-y-4">
@@ -85,7 +91,7 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                             />
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="mt-3 space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">メニュー名</label>
                                 <Input
@@ -107,10 +113,12 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                                 <div className="relative group">
                                     <span className="absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground">¥</span>
                                     <Input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
                                         value={salesPrice ?? ''}
                                         onChange={(e) => {
-                                            const raw = e.target.value;
+                                            const raw = e.target.value.replace(/[^\d]/g, '');
                                             setSalesPrice(raw === '' ? null : toSafeNumber(raw));
                                         }}
                                         onBlur={() => {
@@ -135,7 +143,7 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価率</p>
                                 <p className="mt-1 text-4xl font-black leading-none tabular-nums">
-                                    {hasSalesPrice ? costRate.toFixed(1) : '—'}
+                                    {evaluated.displayRate ?? '—'}
                                     <span className="ml-1 text-lg font-bold">%</span>
                                 </p>
                             </div>
@@ -149,13 +157,13 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                         <div className="bg-muted/40 rounded-xl p-4 border border-border">
                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">粗利益</p>
                             <p className={`text-xl font-semibold tabular-nums ${hasSalesPrice ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                {hasSalesPrice ? Math.round(grossProfit).toLocaleString() : '—'} <span className="text-xs font-normal">円</span>
+                                {safeGrossProfit !== null ? safeGrossProfit.toLocaleString() : '—'} <span className="text-xs font-normal">円</span>
                             </p>
                         </div>
                         <div className="bg-muted/40 rounded-xl p-4 border border-border flex items-center justify-between">
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価合計</p>
-                                <p className="text-xl font-black text-foreground tabular-nums">{Math.round(calculatedTotalCost).toLocaleString()} <span className="text-xs font-normal">円</span></p>
+                                <p className="text-xl font-black text-foreground tabular-nums">{safeTotalCost !== null ? safeTotalCost.toLocaleString() : '—'} <span className="text-xs font-normal">円</span></p>
                             </div>
                             <div className="h-9 w-9 flex items-center justify-center bg-background border border-border rounded-lg text-muted-foreground">
                                 <ReceiptIcon />

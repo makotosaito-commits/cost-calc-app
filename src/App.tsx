@@ -14,10 +14,10 @@ function App() {
                 return <MenuPage />;
             case 'materials':
                 return (
-                    <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-x-hidden">
                         <h2 className="text-lg md:text-2xl font-semibold text-foreground">材料管理</h2>
-                        <div className="grid grid-cols-1 xl:grid-cols-[420px_minmax(0,1fr)] gap-8 items-start xl:h-[calc(100vh-12rem)]">
-                            <div className="xl:sticky xl:top-8">
+                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(360px,420px)_minmax(0,1fr)] gap-6 items-start">
+                            <div className="xl:sticky xl:top-6">
                                 <MaterialForm />
                             </div>
                             <MaterialList />

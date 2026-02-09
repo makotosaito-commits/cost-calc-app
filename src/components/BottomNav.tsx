@@ -14,14 +14,14 @@ export const BottomNav = ({ currentView, onChange }: BottomNavProps) => {
 
     return (
         <div
-            className="fixed left-2 right-2 bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] md:left-0 md:right-0 md:bottom-0 border border-border md:border-t md:border-x-0 md:border-b-0 rounded-xl md:rounded-none bg-card/95 backdrop-blur-md z-50 pb-[calc(env(safe-area-inset-bottom,0px)*0.1)] md:pb-0"
+            className="fixed left-2 right-2 bottom-[max(8px,env(safe-area-inset-bottom))] md:left-0 md:right-0 md:bottom-0 border border-border md:border-t md:border-x-0 md:border-b-0 rounded-xl md:rounded-none bg-card/95 backdrop-blur-md z-50 pb-[max(4px,calc(env(safe-area-inset-bottom)*0.25))] md:pb-0"
         >
-            <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-4">
+            <div className="flex justify-around items-center h-16 min-h-[56px] max-w-lg mx-auto px-3">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => onChange(tab.id)}
-                        className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all duration-200 ${currentView === tab.id
+                        className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-200 ${currentView === tab.id
                             ? 'text-foreground'
                             : 'text-muted-foreground hover:text-foreground'
                             }`}

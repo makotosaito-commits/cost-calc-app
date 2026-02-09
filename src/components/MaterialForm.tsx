@@ -88,7 +88,10 @@ export const MaterialForm = () => {
                             <Input
                                 type="number"
                                 value={price}
-                                onChange={(e) => setPrice(e.target.valueAsNumber)}
+                                onChange={(e) => {
+                                    const raw = e.target.value;
+                                    setPrice(raw === '' ? '' : toSafeNumber(raw));
+                                }}
                                 placeholder="1000"
                                 required
                                 min="0"
@@ -100,7 +103,10 @@ export const MaterialForm = () => {
                             <Input
                                 type="number"
                                 value={quantity}
-                                onChange={(e) => setQuantity(e.target.valueAsNumber)}
+                                onChange={(e) => {
+                                    const raw = e.target.value;
+                                    setQuantity(raw === '' ? '' : toSafeNumber(raw));
+                                }}
                                 placeholder="1"
                                 required
                                 min="0"

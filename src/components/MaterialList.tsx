@@ -2,9 +2,15 @@ import { useMaterials } from '../hooks/useMaterials';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/Table';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { calculateUnitPrice, normalizeAmount, toSafeNumber } from '../lib/calculator';
 
 export const MaterialList = () => {
     const { materials, deleteMaterial } = useMaterials();
+    const getUnitPrice = (price: number, quantity: number, unit: string, fallback?: number) => {
+        const normalizedQty = normalizeAmount(toSafeNumber(quantity), unit);
+        if (normalizedQty > 0) return calculateUnitPrice(toSafeNumber(price), normalizedQty);
+        return toSafeNumber(fallback);
+    };
 
     if (!materials || materials.length === 0) {
         return (
@@ -23,15 +29,15 @@ export const MaterialList = () => {
 
             <div className="md:hidden divide-y divide-border">
                 {materials.map((material) => (
-                    <div key={material.id} className="py-3">
+                    <div key={material.id} className="py-3 px-1 rounded-lg bg-card border border-border">
                         <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                                <p className="font-bold text-foreground truncate">{material.name}</p>
-                                <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                                    {material.purchase_price.toLocaleString()}円 / {material.purchase_quantity}{material.base_unit}
+                            <div className="min-w-0 pr-2">
+                                <p className="font-bold text-foreground leading-tight break-words">{material.name}</p>
+                                <p className="mt-1 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                                    {toSafeNumber(material.purchase_price).toLocaleString()}円 / {toSafeNumber(material.purchase_quantity).toLocaleString()}{material.base_unit}
                                 </p>
-                                <p className="text-xs text-muted-foreground tabular-nums">
-                                    単価 {Math.round(material.calculated_unit_price ?? 0).toLocaleString()}円/{material.base_unit}
+                                <p className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                                    単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.calculated_unit_price)).toLocaleString()}円/{material.base_unit}
                                 </p>
                             </div>
                             <Button
@@ -42,10 +48,10 @@ export const MaterialList = () => {
                                         deleteMaterial(material.id);
                                     }
                                 }}
-                                className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                                className="h-6 w-6 shrink-0 self-center text-muted-foreground hover:text-foreground"
                                 aria-label={`${material.name} を削除`}
                             >
-                                <TrashIcon className="h-3.5 w-3.5" />
+                                <TrashIcon className="h-4 w-4" />
                             </Button>
                         </div>
                     </div>
@@ -74,12 +80,12 @@ export const MaterialList = () => {
                                         </span>
                                     </TableCell>
                                     <TableCell className="text-right font-mono text-xs">
-                                        {material.purchase_price}円 / {material.purchase_quantity}{material.base_unit}
+                                        {toSafeNumber(material.purchase_price)}円 / {toSafeNumber(material.purchase_quantity)}{material.base_unit}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex flex-col items-end leading-tight">
                                             <span className="text-lg font-black text-foreground tabular-nums">
-                                                {Math.round(material.calculated_unit_price ?? 0).toLocaleString()}円
+                                                {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.calculated_unit_price)).toLocaleString()}円
                                             </span>
                                             <span className="text-[10px] text-muted-foreground font-bold tracking-wide">
                                                 /{material.base_unit}

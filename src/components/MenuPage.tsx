@@ -1,24 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMenus } from '../hooks/useMenus';
+import { useCostRateSettings } from '../contexts/CostRateSettingsContext';
 import { MenuDetail } from './MenuDetail';
 import { RecipeEditor } from './RecipeEditor';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
-import { Input } from './ui/Input';
 import { calculateMenuMetrics, toSafeNumber } from '../lib/calculator';
+import { evaluateCostRate } from '../lib/costRateSettings';
 
 export const MenuPage = () => {
     const { menus, addMenu, updateMenu, deleteMenu } = useMenus();
+    const { settings } = useCostRateSettings();
     const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
     const selectedMenu = selectedMenuId ? menus.find(m => m.id === selectedMenuId) : null;
-    const [desktopName, setDesktopName] = useState('');
-    const [desktopSalesPrice, setDesktopSalesPrice] = useState<number | null>(null);
-
-    useEffect(() => {
-        if (!selectedMenu) return;
-        setDesktopName(selectedMenu.name);
-        setDesktopSalesPrice(toSafeNumber(selectedMenu.sales_price) > 0 ? toSafeNumber(selectedMenu.sales_price) : null);
-    }, [selectedMenu?.id, selectedMenu?.name, selectedMenu?.sales_price]);
 
     const handleAddMenu = async () => {
         await addMenu({
@@ -47,9 +41,20 @@ export const MenuPage = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                     {menus.map(menu => {
-                        let rateColorClass = 'text-zinc-700';
-                        if (menu.cost_rate > 45) rateColorClass = 'text-zinc-900';
-                        else if (menu.cost_rate > 30) rateColorClass = 'text-zinc-800';
+                        const safeSales = Number.isFinite(toSafeNumber(menu.sales_price)) && toSafeNumber(menu.sales_price) > 0
+                            ? Math.round(toSafeNumber(menu.sales_price)).toLocaleString()
+                            : '—';
+                        const safeCost = Number.isFinite(toSafeNumber(menu.total_cost))
+                            ? Math.round(toSafeNumber(menu.total_cost)).toLocaleString()
+                            : '—';
+                        const evaluated = evaluateCostRate(menu.cost_rate, menu.sales_price, settings);
+                        const rateColorClass = evaluated.tone === 'none'
+                            ? 'text-muted-foreground'
+                            : evaluated.tone === 'good'
+                                ? 'text-zinc-700'
+                                : evaluated.tone === 'warn'
+                                    ? 'text-zinc-800'
+                                    : 'text-zinc-900';
 
                         return (
                             <Card
@@ -75,15 +80,16 @@ export const MenuPage = () => {
                                     <div className="grid grid-cols-3 gap-2">
                                         <div className="rounded-lg bg-muted/60 border border-border p-2">
                                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">販売</p>
-                                            <p className="text-sm font-semibold text-foreground tabular-nums">{Math.round(menu.sales_price).toLocaleString()}円</p>
+                                            <p className="text-sm font-semibold text-foreground tabular-nums">{safeSales}{safeSales === '—' ? '' : '円'}</p>
                                         </div>
                                         <div className="rounded-lg bg-muted/60 border border-border p-2">
                                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">原価</p>
-                                            <p className="text-sm font-semibold text-foreground tabular-nums">{Math.round(menu.total_cost).toLocaleString()}円</p>
+                                            <p className="text-sm font-semibold text-foreground tabular-nums">{safeCost}{safeCost === '—' ? '' : '円'}</p>
                                         </div>
                                         <div className="rounded-lg bg-muted/60 border border-border p-2">
                                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">原価率</p>
-                                            <p className={`text-sm font-semibold tabular-nums ${rateColorClass}`}>{menu.cost_rate.toFixed(1)}%</p>
+                                            <p className={`text-sm font-semibold tabular-nums ${rateColorClass}`}>{evaluated.displayRate ?? '—'}{evaluated.displayRate === null ? '' : '%'}</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">{evaluated.label ?? '—'}</p>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -113,23 +119,16 @@ export const MenuPage = () => {
         }
     };
 
-    let rateColorClass = 'text-zinc-700';
-    if (selectedMenu.cost_rate > 45) rateColorClass = 'text-zinc-900';
-    else if (selectedMenu.cost_rate > 30) rateColorClass = 'text-zinc-800';
-
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in">
             <div className="flex items-center justify-between border-b border-border pb-6">
                 <Button
                     variant="ghost"
                     onClick={async () => {
-                        const trimmedName = desktopName.trim() || selectedMenu.name.trim();
+                        const trimmedName = selectedMenu.name.trim();
                         if (!trimmedName) {
                             alert('一覧に戻る前にメニュー名を入力してください。');
                             return;
-                        }
-                        if (trimmedName !== selectedMenu.name) {
-                            await updateMenu(selectedMenu.id, { name: trimmedName });
                         }
                         setSelectedMenuId(null);
                     }}
@@ -148,94 +147,19 @@ export const MenuPage = () => {
                 </Button>
             </div>
 
-            <div className="md:hidden">
-                <MenuDetail
-                    menu={selectedMenu}
-                    onUpdate={updateMenu}
-                    calculatedTotalCost={selectedMenu.total_cost}
-                />
-                <div className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-[360px_minmax(0,1fr)] gap-6 items-start">
+                <div className="md:sticky md:top-6 md:max-h-[calc(100dvh-8rem)] md:overflow-auto">
+                    <MenuDetail
+                        menu={selectedMenu}
+                        onUpdate={updateMenu}
+                        calculatedTotalCost={selectedMenu.total_cost}
+                    />
+                </div>
+                <div className="space-y-6">
                     <RecipeEditor
                         menuId={selectedMenu.id}
                         onTotalCostChange={handleTotalCostChange}
                     />
-                </div>
-            </div>
-
-            <div className="hidden md:block space-y-6">
-                <Card className="bg-card border-border">
-                    <CardContent className="p-5 grid grid-cols-2 gap-4 items-end">
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">メニュー名</label>
-                            <Input
-                                value={desktopName}
-                                onChange={(e) => setDesktopName(e.target.value)}
-                                onBlur={async () => {
-                                    const trimmed = desktopName.trim();
-                                    if (trimmed && trimmed !== selectedMenu.name) {
-                                        await updateMenu(selectedMenu.id, { name: trimmed });
-                                        setDesktopName(trimmed);
-                                    }
-                                }}
-                                placeholder="例: 牛すじ煮込み"
-                                className="text-lg font-semibold bg-background border-border"
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">販売価格 (円)</label>
-                            <Input
-                                type="number"
-                                value={desktopSalesPrice ?? ''}
-                                onChange={(e) => {
-                                    const raw = e.target.value;
-                                    setDesktopSalesPrice(raw === '' ? null : toSafeNumber(raw));
-                                }}
-                                onBlur={async () => {
-                                    const parsed = desktopSalesPrice ?? 0;
-                                    if (parsed !== toSafeNumber(selectedMenu.sales_price)) {
-                                        await updateMenu(selectedMenu.id, { sales_price: parsed });
-                                    }
-                                }}
-                                placeholder="例: 850"
-                                className="text-lg font-semibold bg-background border-border"
-                            />
-                        </div>
-
-                        <details className="col-span-2 rounded-lg border border-border bg-muted/40 p-3">
-                            <summary className="cursor-pointer text-xs font-bold tracking-wider text-muted-foreground">写真（任意）</summary>
-                            <div className="mt-3">
-                                {selectedMenu.image ? (
-                                    <img src={selectedMenu.image} alt={selectedMenu.name || 'Menu'} className="h-40 w-auto rounded-lg border border-border object-cover" />
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">写真は未設定です（SP表示で追加できます）。</p>
-                                )}
-                            </div>
-                        </details>
-                    </CardContent>
-                </Card>
-
-                <RecipeEditor
-                    menuId={selectedMenu.id}
-                    onTotalCostChange={handleTotalCostChange}
-                />
-
-                <div className="sticky bottom-24 z-30 flex justify-end pointer-events-none">
-                    <Card className="w-full max-w-lg bg-card border-border shadow-lg pointer-events-auto">
-                        <CardContent className="p-4 grid grid-cols-3 gap-3">
-                            <div className="rounded-lg bg-muted/50 border border-border p-3">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価合計</p>
-                                <p className="text-xl font-black tabular-nums text-foreground">{Math.round(selectedMenu.total_cost).toLocaleString()}円</p>
-                            </div>
-                            <div className="rounded-lg bg-muted/50 border border-border p-3">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">粗利益</p>
-                                <p className="text-xl font-black tabular-nums text-foreground">{Math.round(selectedMenu.gross_profit).toLocaleString()}円</p>
-                            </div>
-                            <div className="rounded-lg bg-muted/50 border border-border p-3">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価率</p>
-                                <p className={`text-2xl font-black tabular-nums ${rateColorClass}`}>{selectedMenu.cost_rate.toFixed(1)}%</p>
-                            </div>
-                        </CardContent>
-                    </Card>
                 </div>
             </div>
 
