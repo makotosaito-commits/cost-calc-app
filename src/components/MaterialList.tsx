@@ -15,16 +15,16 @@ export const MaterialList = () => {
     }
 
     return (
-        <div className="space-y-6 animate-in">
+        <div className="space-y-6 animate-in xl:flex xl:flex-col xl:min-h-0 xl:h-full">
             <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-foreground">登録済み材料</h3>
                 <span className="text-xs text-muted-foreground font-medium">{materials.length} 件の材料</span>
             </div>
 
-            <Card className="bg-card/50 border-border p-0">
-                <div className="overflow-x-auto">
+            <Card className="bg-card/50 border-border p-0 xl:flex-1 xl:min-h-0">
+                <div className="overflow-x-auto xl:h-full xl:overflow-y-auto">
                     <Table>
-                        <TableHeader className="bg-background border-none">
+                        <TableHeader className="bg-background border-none xl:sticky xl:top-0 xl:z-10 xl:backdrop-blur-sm">
                             <TableRow className="hover:bg-transparent">
                                 <TableHead className="py-4">名前</TableHead>
                                 <TableHead>カテゴリ</TableHead>
@@ -46,8 +46,14 @@ export const MaterialList = () => {
                                         {material.purchase_price}円 / {material.purchase_quantity}{material.base_unit}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <span className="text-base font-black text-foreground">{material.calculated_unit_price?.toFixed(3)}</span>
-                                        <span className="text-[10px] ml-1 text-muted-foreground font-bold">円/{material.base_unit}</span>
+                                        <div className="flex flex-col items-end leading-tight">
+                                            <span className="text-lg font-black text-foreground tabular-nums">
+                                                {Math.round(material.calculated_unit_price ?? 0).toLocaleString()}円
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground font-bold tracking-wide">
+                                                /{material.base_unit}
+                                            </span>
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         <Button

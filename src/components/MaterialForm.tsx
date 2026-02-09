@@ -31,7 +31,7 @@ export const MaterialForm = () => {
         if (!name || !price || !quantity) return;
 
         let baseUnit: BaseUnit = 'g';
-        if (['ml', 'L'].includes(inputUnit)) baseUnit = 'ml';
+        if (inputUnit === 'ml') baseUnit = 'ml';
         if (inputUnit === '個') baseUnit = '個';
 
         const normalizedQty = normalizeAmount(Number(quantity), inputUnit);
@@ -112,7 +112,7 @@ export const MaterialForm = () => {
                     <div className="space-y-1.5">
                         <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">単位</label>
                         <SegmentedControl
-                            options={['g', 'kg', 'ml', 'L', '個']}
+                            options={['g', 'ml', '個']}
                             value={inputUnit}
                             onChange={setInputUnit}
                             className="w-full bg-background border border-border"
@@ -129,7 +129,7 @@ export const MaterialForm = () => {
                         )}
                         <div className={`rounded-xl border border-border p-4 transition-all duration-300 ${calculatedPrice !== null ? 'bg-background opacity-100' : 'bg-transparent opacity-30 select-none'}`}>
                             <p className="text-center text-sm font-bold text-foreground">
-                                {calculatedPrice !== null ? calculatedPrice.toFixed(3) : '0.000'} <span className="text-xs font-normal text-muted-foreground">円 / {['ml', 'L'].includes(inputUnit) ? 'ml' : (inputUnit === '個' ? '個' : 'g')}</span>
+                                {calculatedPrice !== null ? calculatedPrice.toFixed(3) : '0.000'} <span className="text-xs font-normal text-muted-foreground">円 / {inputUnit === '個' ? '個' : inputUnit}</span>
                             </p>
                         </div>
                     </div>

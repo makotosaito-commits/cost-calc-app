@@ -18,6 +18,17 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
     const [selectedMaterialId, setSelectedMaterialId] = useState('');
 
     useEffect(() => {
+        recipes.forEach((recipe) => {
+            if (recipe.usage_unit === 'kg') {
+                updateRecipe(recipe.id, { usage_amount: recipe.usage_amount * 1000, usage_unit: 'g' });
+            }
+            if (recipe.usage_unit === 'L') {
+                updateRecipe(recipe.id, { usage_amount: recipe.usage_amount * 1000, usage_unit: 'ml' });
+            }
+        });
+    }, [recipes, updateRecipe]);
+
+    useEffect(() => {
         let total = 0;
         recipes.forEach(recipe => {
             const material = materials.find(m => m.id === recipe.material_id);
@@ -117,9 +128,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                                 onChange={(e) => updateRecipe(recipe.id, { usage_unit: e.target.value })}
                                             >
                                                 <option value="g">g</option>
-                                                <option value="kg">kg</option>
                                                 <option value="ml">ml</option>
-                                                <option value="L">L</option>
                                                 <option value="個">個</option>
                                             </select>
                                         </TableCell>

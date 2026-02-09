@@ -12,20 +12,22 @@ interface MenuDetailProps {
 
 export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailProps) => {
     const [name, setName] = useState(menu.name);
-    const [salesPrice, setSalesPrice] = useState(menu.sales_price);
+    const [salesPrice, setSalesPrice] = useState(menu.sales_price > 0 ? String(menu.sales_price) : '');
     const [image, setImage] = useState<string | undefined>(menu.image);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setName(menu.name);
-        setSalesPrice(menu.sales_price);
+        setSalesPrice(menu.sales_price > 0 ? String(menu.sales_price) : '');
         setImage(menu.image);
     }, [menu]);
 
     const handleSave = async (updates: Partial<Menu> = {}) => {
+        const parsedSalesPrice = salesPrice.trim() === '' ? 0 : Number(salesPrice);
+
         await onUpdate(menu.id, {
             name,
-            sales_price: Number(salesPrice),
+            sales_price: parsedSalesPrice,
             image,
             ...updates
         });
@@ -44,8 +46,10 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
         }
     };
 
-    const grossProfit = salesPrice - calculatedTotalCost;
-    const costRate = salesPrice > 0 ? (calculatedTotalCost / salesPrice) * 100 : 0;
+    const hasSalesPrice = salesPrice.trim() !== '';
+    const numericSalesPrice = hasSalesPrice ? Number(salesPrice) : 0;
+    const grossProfit = numericSalesPrice - calculatedTotalCost;
+    const costRate = numericSalesPrice > 0 ? (calculatedTotalCost / numericSalesPrice) * 100 : 0;
 
     return (
         <div className="space-y-6">
@@ -98,8 +102,9 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                                     <Input
                                         type="number"
                                         value={salesPrice}
-                                        onChange={(e) => setSalesPrice(e.target.valueAsNumber || 0)}
+                                        onChange={(e) => setSalesPrice(e.target.value)}
                                         onBlur={() => handleSave()}
+                                        placeholder="例: 850"
                                         className="text-2xl font-black bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 border-zinc-800 rounded-none focus-visible:ring-0 focus-visible:border-primary transition-all pl-5 pr-1"
                                     />
                                 </div>
@@ -119,14 +124,14 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800/50">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">粗利益</p>
-                                        <p className={`text-xl font-black ${grossProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                            {Math.round(grossProfit).toLocaleString()} <span className="text-xs font-normal">円</span>
+                                        <p className={`text-xl font-black ${hasSalesPrice ? (grossProfit >= 0 ? 'text-green-500' : 'text-red-500') : 'text-muted-foreground'}`}>
+                                            {hasSalesPrice ? Math.round(grossProfit).toLocaleString() : '—'} <span className="text-xs font-normal">円</span>
                                         </p>
                                     </div>
                                     <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800/50">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価率</p>
-                                        <p className={`text-xl font-black ${costRate <= 30 ? 'text-green-500' : (costRate <= 45 ? 'text-yellow-500' : 'text-red-500')}`}>
-                                            {costRate.toFixed(1)} <span className="text-xs font-normal">%</span>
+                                        <p className={`text-xl font-black ${hasSalesPrice ? (costRate <= 30 ? 'text-green-500' : (costRate <= 45 ? 'text-yellow-500' : 'text-red-500')) : 'text-muted-foreground'}`}>
+                                            {hasSalesPrice ? costRate.toFixed(1) : '—'} <span className="text-xs font-normal">%</span>
                                         </p>
                                     </div>
                                 </div>

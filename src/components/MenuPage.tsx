@@ -4,7 +4,6 @@ import { MenuDetail } from './MenuDetail';
 import { RecipeEditor } from './RecipeEditor';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
-import { Badge } from './ui/Badge';
 
 export const MenuPage = () => {
     const { menus, addMenu, updateMenu, deleteMenu } = useMenus();
@@ -36,11 +35,11 @@ export const MenuPage = () => {
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                     {menus.map(menu => {
-                        let badgeVariant: 'success' | 'warning' | 'destructive' = 'success';
-                        if (menu.cost_rate > 45) badgeVariant = 'destructive';
-                        else if (menu.cost_rate > 30) badgeVariant = 'warning';
+                        let rateColorClass = 'text-emerald-400';
+                        if (menu.cost_rate > 45) rateColorClass = 'text-red-400';
+                        else if (menu.cost_rate > 30) rateColorClass = 'text-amber-400';
 
                         return (
                             <Card
@@ -59,16 +58,23 @@ export const MenuPage = () => {
                                 </div>
 
                                 <CardContent className="p-5 absolute bottom-0 left-0 right-0">
-                                    <div className="flex justify-between items-end mb-1">
+                                    <div className="flex justify-between items-end mb-3">
                                         <h3 className="font-bold text-xl leading-tight line-clamp-2 text-white group-hover:text-primary-foreground transition-colors drop-shadow-md">{menu.name}</h3>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <p className="text-sm font-medium text-muted-foreground">
-                                            {menu.sales_price.toLocaleString()} 円
-                                        </p>
-                                        <Badge variant={badgeVariant} className="shrink-0 shadow-sm backdrop-blur-sm">
-                                            {menu.cost_rate.toFixed(1)}%
-                                        </Badge>
+
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div className="rounded-lg bg-black/30 border border-white/10 p-2 backdrop-blur-sm">
+                                            <p className="text-[10px] uppercase tracking-wider text-zinc-300/80">販売</p>
+                                            <p className="text-sm font-bold text-white tabular-nums">{Math.round(menu.sales_price).toLocaleString()}円</p>
+                                        </div>
+                                        <div className="rounded-lg bg-black/30 border border-white/10 p-2 backdrop-blur-sm">
+                                            <p className="text-[10px] uppercase tracking-wider text-zinc-300/80">原価</p>
+                                            <p className="text-sm font-bold text-white tabular-nums">{Math.round(menu.total_cost).toLocaleString()}円</p>
+                                        </div>
+                                        <div className="rounded-lg bg-black/30 border border-white/10 p-2 backdrop-blur-sm">
+                                            <p className="text-[10px] uppercase tracking-wider text-zinc-300/80">原価率</p>
+                                            <p className={`text-sm font-black tabular-nums ${rateColorClass}`}>{menu.cost_rate.toFixed(1)}%</p>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -87,7 +93,7 @@ export const MenuPage = () => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-in">
+        <div className="max-w-6xl mx-auto space-y-8 animate-in">
             <div className="flex items-center justify-between border-b border-border pb-6">
                 <Button variant="ghost" onClick={() => setSelectedMenuId(null)} className="pl-0 text-muted-foreground hover:text-foreground">
                     <ArrowLeftIcon className="mr-2 h-4 w-4" />
@@ -103,27 +109,31 @@ export const MenuPage = () => {
                 </Button>
             </div>
 
-            <div className="space-y-12">
-                <MenuDetail
-                    menu={selectedMenu}
-                    onUpdate={updateMenu}
-                    calculatedTotalCost={selectedMenu.total_cost}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(340px,460px)_minmax(0,1fr)] gap-8 md:items-start md:h-[calc(100vh-13rem)]">
+                <div className="md:sticky md:top-6">
+                    <MenuDetail
+                        menu={selectedMenu}
+                        onUpdate={updateMenu}
+                        calculatedTotalCost={selectedMenu.total_cost}
+                    />
+                </div>
 
-                <RecipeEditor
-                    menuId={selectedMenu.id}
-                    onTotalCostChange={(cost) => {
-                        if (Math.abs(selectedMenu.total_cost - cost) > 1) {
-                            const profit = selectedMenu.sales_price - cost;
-                            const rate = selectedMenu.sales_price > 0 ? (cost / selectedMenu.sales_price) * 100 : 0;
-                            updateMenu(selectedMenu.id, {
-                                total_cost: cost,
-                                gross_profit: profit,
-                                cost_rate: rate
-                            });
-                        }
-                    }}
-                />
+                <div className="md:h-full md:min-h-0 md:overflow-y-auto md:pr-1">
+                    <RecipeEditor
+                        menuId={selectedMenu.id}
+                        onTotalCostChange={(cost) => {
+                            if (Math.abs(selectedMenu.total_cost - cost) > 1) {
+                                const profit = selectedMenu.sales_price - cost;
+                                const rate = selectedMenu.sales_price > 0 ? (cost / selectedMenu.sales_price) * 100 : 0;
+                                updateMenu(selectedMenu.id, {
+                                    total_cost: cost,
+                                    gross_profit: profit,
+                                    cost_rate: rate
+                                });
+                            }
+                        }}
+                    />
+                </div>
             </div>
         </div>
     );
