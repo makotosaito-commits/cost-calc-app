@@ -12,7 +12,7 @@ export const MenuPage = () => {
 
     const handleAddMenu = async () => {
         await addMenu({
-            name: '新規メニュー',
+            name: '',
             sales_price: 0,
             total_cost: 0,
             gross_profit: 0,
@@ -59,7 +59,9 @@ export const MenuPage = () => {
 
                                 <CardContent className="p-5 absolute bottom-0 left-0 right-0">
                                     <div className="flex justify-between items-end mb-3">
-                                        <h3 className="font-bold text-xl leading-tight line-clamp-2 text-white group-hover:text-primary-foreground transition-colors drop-shadow-md">{menu.name}</h3>
+                                        <h3 className="font-bold text-xl leading-tight line-clamp-2 text-white group-hover:text-primary-foreground transition-colors drop-shadow-md">
+                                            {menu.name || '名称未入力'}
+                                        </h3>
                                     </div>
 
                                     <div className="grid grid-cols-3 gap-2">
@@ -95,7 +97,21 @@ export const MenuPage = () => {
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in">
             <div className="flex items-center justify-between border-b border-border pb-6">
-                <Button variant="ghost" onClick={() => setSelectedMenuId(null)} className="pl-0 text-muted-foreground hover:text-foreground">
+                <Button
+                    variant="ghost"
+                    onClick={async () => {
+                        const trimmedName = selectedMenu.name.trim();
+                        if (!trimmedName) {
+                            alert('一覧に戻る前にメニュー名を入力してください。');
+                            return;
+                        }
+                        if (trimmedName !== selectedMenu.name) {
+                            await updateMenu(selectedMenu.id, { name: trimmedName });
+                        }
+                        setSelectedMenuId(null);
+                    }}
+                    className="pl-0 text-muted-foreground hover:text-foreground"
+                >
                     <ArrowLeftIcon className="mr-2 h-4 w-4" />
                     ダッシュボードへ戻る
                 </Button>
@@ -110,7 +126,7 @@ export const MenuPage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-[minmax(340px,460px)_minmax(0,1fr)] gap-8 md:items-start md:h-[calc(100vh-13rem)]">
-                <div className="md:sticky md:top-6">
+                <div className="md:sticky md:top-6 md:pr-6">
                     <MenuDetail
                         menu={selectedMenu}
                         onUpdate={updateMenu}
@@ -118,7 +134,7 @@ export const MenuPage = () => {
                     />
                 </div>
 
-                <div className="md:h-full md:min-h-0 md:overflow-y-auto md:pr-1">
+                <div className="md:h-full md:min-h-0 md:overflow-y-auto md:pl-6 md:border-l md:border-zinc-800/60 md:pr-1">
                     <RecipeEditor
                         menuId={selectedMenu.id}
                         onTotalCostChange={(cost) => {

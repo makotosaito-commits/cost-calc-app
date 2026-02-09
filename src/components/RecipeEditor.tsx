@@ -62,7 +62,10 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 rounded-2xl border border-zinc-800/60 bg-zinc-950/30 p-4 md:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+            <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">作業エリア</p>
+            </div>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h3 className="text-xl font-bold text-foreground">レシピ構成</h3>
                 <div className="flex gap-2">
@@ -84,75 +87,143 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                 </div>
             </div>
 
-            <Card className="bg-zinc-900/30 border-zinc-800 p-0">
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader className="bg-zinc-950/50">
-                            <TableRow className="hover:bg-transparent">
-                                <TableHead>使用材料</TableHead>
-                                <TableHead className="w-[120px] text-center">使用量</TableHead>
-                                <TableHead className="w-[100px] text-center">単位</TableHead>
-                                {/* Yield Rate Column Removed */}
-                                <TableHead className="text-right">原価(円)</TableHead>
-                                <TableHead className="w-[60px]"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {recipes.map((recipe) => {
-                                const material = materials.find(m => m.id === recipe.material_id);
-                                // Yield rate 100% hardcoded for calculation
-                                const lineCost = material && material.calculated_unit_price
-                                    ? calculateLineCost(recipe.usage_amount, recipe.usage_unit, 100, material.calculated_unit_price)
-                                    : 0;
+            <div className="md:hidden">
+                {recipes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">レシピはまだありません。材料を追加してください。</p>
+                ) : (
+                    <div className="divide-y divide-zinc-800/60">
+                        {recipes.map((recipe) => {
+                            const material = materials.find(m => m.id === recipe.material_id);
+                            const lineCost = material && material.calculated_unit_price
+                                ? calculateLineCost(recipe.usage_amount, recipe.usage_unit, 100, material.calculated_unit_price)
+                                : 0;
 
-                                return (
-                                    <TableRow key={recipe.id} className="border-zinc-800/50 group">
-                                        <TableCell className="font-bold py-4">
-                                            {material?.name || 'Unknown'}
-                                            <p className="text-[10px] text-muted-foreground font-normal">
+                            return (
+                                <div key={recipe.id} className="py-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="font-bold text-foreground">{material?.name || 'Unknown'}</p>
+                                            <p className="text-[10px] text-muted-foreground">
                                                 単価: {material?.calculated_unit_price?.toFixed(3)} 円/{material?.base_unit}
                                             </p>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input
-                                                type="number"
-                                                className="h-9 w-[100px] mx-auto text-center bg-zinc-950 border-zinc-800 focus:border-primary"
-                                                value={recipe.usage_amount}
-                                                onChange={(e) => updateRecipe(recipe.id, { usage_amount: e.target.valueAsNumber || 0 })}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <select
-                                                className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-950 text-sm text-center focus:ring-2 focus:ring-ring outline-none"
-                                                value={recipe.usage_unit}
-                                                onChange={(e) => updateRecipe(recipe.id, { usage_unit: e.target.value })}
-                                            >
-                                                <option value="g">g</option>
-                                                <option value="ml">ml</option>
-                                                <option value="個">個</option>
-                                            </select>
-                                        </TableCell>
-                                        {/* Yield Rate Input Removed */}
-                                        <TableCell className="text-right font-black text-foreground">
-                                            {Math.round(lineCost).toLocaleString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button variant="ghost" size="icon" onClick={() => deleteRecipe(recipe.id)} className="text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <TrashIcon className="h-4 w-4" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </div>
-                {recipes.length === 0 && (
-                    <div className="py-12 text-center text-muted-foreground text-sm">
-                        レシピが空です。上のプルダウンから材料を追加してください。
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => deleteRecipe(recipe.id)}
+                                            className="h-8 w-8 text-zinc-500 hover:text-red-500"
+                                        >
+                                            <TrashIcon className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+
+                                    <div className="mt-3 flex items-end justify-between gap-3">
+                                        <div className="flex items-end gap-2">
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] text-muted-foreground">使用量</p>
+                                                <Input
+                                                    type="number"
+                                                    className="h-9 w-[96px] text-center bg-zinc-950 border-zinc-800 focus:border-primary"
+                                                    value={recipe.usage_amount}
+                                                    onChange={(e) => updateRecipe(recipe.id, { usage_amount: e.target.valueAsNumber || 0 })}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] text-muted-foreground">単位</p>
+                                                <select
+                                                    className="h-9 w-[72px] rounded-md border border-zinc-800 bg-zinc-950 text-sm text-center focus:ring-2 focus:ring-ring outline-none"
+                                                    value={recipe.usage_unit}
+                                                    onChange={(e) => updateRecipe(recipe.id, { usage_unit: e.target.value })}
+                                                >
+                                                    <option value="g">g</option>
+                                                    <option value="ml">ml</option>
+                                                    <option value="個">個</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-right">
+                                            <p className="text-[10px] text-muted-foreground">原価</p>
+                                            <p className="text-lg font-black text-foreground tabular-nums">
+                                                {Math.round(lineCost).toLocaleString()}円
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
-            </Card>
+            </div>
+
+            <div className="hidden md:block">
+                <Card className="bg-zinc-900/20 border-zinc-800 p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-zinc-950/50">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead>使用材料</TableHead>
+                                    <TableHead className="w-[120px] text-center">使用量</TableHead>
+                                    <TableHead className="w-[100px] text-center">単位</TableHead>
+                                    <TableHead className="text-right">原価(円)</TableHead>
+                                    <TableHead className="w-[60px]"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {recipes.map((recipe) => {
+                                    const material = materials.find(m => m.id === recipe.material_id);
+                                    const lineCost = material && material.calculated_unit_price
+                                        ? calculateLineCost(recipe.usage_amount, recipe.usage_unit, 100, material.calculated_unit_price)
+                                        : 0;
+
+                                    return (
+                                        <TableRow key={recipe.id} className="border-zinc-800/50 group">
+                                            <TableCell className="font-bold py-4">
+                                                {material?.name || 'Unknown'}
+                                                <p className="text-[10px] text-muted-foreground font-normal">
+                                                    単価: {material?.calculated_unit_price?.toFixed(3)} 円/{material?.base_unit}
+                                                </p>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input
+                                                    type="number"
+                                                    className="h-9 w-[100px] mx-auto text-center bg-zinc-950 border-zinc-800 focus:border-primary"
+                                                    value={recipe.usage_amount}
+                                                    onChange={(e) => updateRecipe(recipe.id, { usage_amount: e.target.valueAsNumber || 0 })}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <select
+                                                    className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-950 text-sm text-center focus:ring-2 focus:ring-ring outline-none"
+                                                    value={recipe.usage_unit}
+                                                    onChange={(e) => updateRecipe(recipe.id, { usage_unit: e.target.value })}
+                                                >
+                                                    <option value="g">g</option>
+                                                    <option value="ml">ml</option>
+                                                    <option value="個">個</option>
+                                                </select>
+                                            </TableCell>
+                                            <TableCell className="text-right font-black text-foreground">
+                                                {Math.round(lineCost).toLocaleString()}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button variant="ghost" size="icon" onClick={() => deleteRecipe(recipe.id)} className="text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <TrashIcon className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    {recipes.length === 0 && (
+                        <div className="py-12 text-center text-muted-foreground text-sm">
+                            レシピが空です。上のプルダウンから材料を追加してください。
+                        </div>
+                    )}
+                </Card>
+            </div>
         </div>
     );
 };

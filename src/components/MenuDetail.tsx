@@ -23,14 +23,7 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
     }, [menu]);
 
     const handleSave = async (updates: Partial<Menu> = {}) => {
-        const parsedSalesPrice = salesPrice.trim() === '' ? 0 : Number(salesPrice);
-
-        await onUpdate(menu.id, {
-            name,
-            sales_price: parsedSalesPrice,
-            image,
-            ...updates
-        });
+        await onUpdate(menu.id, updates);
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,14 +43,22 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
     const numericSalesPrice = hasSalesPrice ? Number(salesPrice) : 0;
     const grossProfit = numericSalesPrice - calculatedTotalCost;
     const costRate = numericSalesPrice > 0 ? (calculatedTotalCost / numericSalesPrice) * 100 : 0;
+    const rateToneClass = !hasSalesPrice
+        ? 'text-muted-foreground border-zinc-700 bg-zinc-950/30'
+        : costRate <= 30
+            ? 'text-green-400 border-green-500/30 bg-green-500/10'
+            : costRate <= 45
+                ? 'text-amber-400 border-amber-500/30 bg-amber-500/10'
+                : 'text-red-400 border-red-500/30 bg-red-500/10';
+    const rateLabel = !hasSalesPrice ? '未入力' : (costRate <= 30 ? '良好' : (costRate <= 45 ? '注意' : '高い'));
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <Card className="bg-zinc-900 border-zinc-800 shadow-2xl overflow-visible">
                 <CardContent className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Image Upload Section */}
-                        <div className="order-2 md:order-1 flex justify-center md:block">
+                    <div className="space-y-6">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">概要</p>
+                        <div className="flex justify-center md:block">
                             <div
                                 className="relative w-full aspect-video bg-zinc-950 rounded-xl border-2 border-dashed border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:border-zinc-600 transition-colors group"
                                 onClick={() => fileInputRef.current?.click()}
@@ -85,13 +86,20 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                             />
                         </div>
 
-                        <div className="order-1 md:order-2 space-y-4">
+                        <div className="space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">メニュー名</label>
                                 <Input
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    onBlur={() => handleSave()}
+                                    onBlur={() => {
+                                        const trimmedName = name.trim();
+                                        if (trimmedName) {
+                                            setName(trimmedName);
+                                            handleSave({ name: trimmedName });
+                                        }
+                                    }}
+                                    placeholder="例: 牛すじ煮込み"
                                     className="text-xl font-bold bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 border-zinc-800 rounded-none focus-visible:ring-0 focus-visible:border-primary transition-all px-1"
                                 />
                             </div>
@@ -103,38 +111,52 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                                         type="number"
                                         value={salesPrice}
                                         onChange={(e) => setSalesPrice(e.target.value)}
-                                        onBlur={() => handleSave()}
+                                        onBlur={() => {
+                                            const parsedSalesPrice = salesPrice.trim() === '' ? 0 : Number(salesPrice);
+                                            handleSave({ sales_price: parsedSalesPrice });
+                                        }}
                                         placeholder="例: 850"
                                         className="text-2xl font-black bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 border-zinc-800 rounded-none focus-visible:ring-0 focus-visible:border-primary transition-all pl-5 pr-1"
                                     />
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
-                            <div className="grid grid-cols-1 gap-3 mt-8">
-                                <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800/50 flex items-center justify-between">
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価合計</p>
-                                        <p className="text-2xl font-black text-foreground">{Math.round(calculatedTotalCost).toLocaleString()} <span className="text-xs font-normal">円</span></p>
-                                    </div>
-                                    <div className="h-10 w-10 flex items-center justify-center bg-zinc-800 rounded-lg text-muted-foreground">
-                                        <ReceiptIcon />
-                                    </div>
-                                </div>
+            <Card className="bg-zinc-900 border-zinc-800 shadow-2xl">
+                <CardContent className="p-6 space-y-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">結果</p>
+                    <div className={`rounded-xl border p-4 ${rateToneClass}`}>
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価率</p>
+                                <p className="mt-1 text-4xl font-black leading-none tabular-nums">
+                                    {hasSalesPrice ? costRate.toFixed(1) : '—'}
+                                    <span className="ml-1 text-lg font-bold">%</span>
+                                </p>
+                            </div>
+                            <span className="text-[11px] font-bold tracking-wide rounded-full px-2 py-1 border border-current/30 bg-black/20">
+                                {rateLabel}
+                            </span>
+                        </div>
+                    </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800/50">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">粗利益</p>
-                                        <p className={`text-xl font-black ${hasSalesPrice ? (grossProfit >= 0 ? 'text-green-500' : 'text-red-500') : 'text-muted-foreground'}`}>
-                                            {hasSalesPrice ? Math.round(grossProfit).toLocaleString() : '—'} <span className="text-xs font-normal">円</span>
-                                        </p>
-                                    </div>
-                                    <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800/50">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価率</p>
-                                        <p className={`text-xl font-black ${hasSalesPrice ? (costRate <= 30 ? 'text-green-500' : (costRate <= 45 ? 'text-yellow-500' : 'text-red-500')) : 'text-muted-foreground'}`}>
-                                            {hasSalesPrice ? costRate.toFixed(1) : '—'} <span className="text-xs font-normal">%</span>
-                                        </p>
-                                    </div>
-                                </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800/50">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">粗利益</p>
+                            <p className={`text-xl font-black tabular-nums ${hasSalesPrice ? (grossProfit >= 0 ? 'text-green-500' : 'text-red-500') : 'text-muted-foreground'}`}>
+                                {hasSalesPrice ? Math.round(grossProfit).toLocaleString() : '—'} <span className="text-xs font-normal">円</span>
+                            </p>
+                        </div>
+                        <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800/50 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価合計</p>
+                                <p className="text-xl font-black text-foreground tabular-nums">{Math.round(calculatedTotalCost).toLocaleString()} <span className="text-xs font-normal">円</span></p>
+                            </div>
+                            <div className="h-9 w-9 flex items-center justify-center bg-zinc-800 rounded-lg text-muted-foreground">
+                                <ReceiptIcon />
                             </div>
                         </div>
                     </div>
