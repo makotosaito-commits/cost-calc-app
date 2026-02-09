@@ -16,6 +16,29 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
     const { recipes, addRecipe, updateRecipe, deleteRecipe } = useRecipes(menuId);
     const { materials } = useMaterials();
     const [selectedMaterialId, setSelectedMaterialId] = useState('');
+    const [usageDrafts, setUsageDrafts] = useState<Record<string, string>>({});
+    const [activeUsageId, setActiveUsageId] = useState<string | null>(null);
+
+    const normalizeUsageInput = (raw: string) => {
+        const cleaned = raw.replace(/,/g, '').replace(/[^\d.]/g, '');
+        const [integerPart, ...decimalParts] = cleaned.split('.');
+        if (decimalParts.length === 0) {
+            return integerPart;
+        }
+        return `${integerPart}.${decimalParts.join('')}`;
+    };
+
+    const handleUsageChange = (recipeId: string, raw: string) => {
+        const normalized = normalizeUsageInput(raw);
+        setUsageDrafts((prev) => ({ ...prev, [recipeId]: normalized }));
+        void updateRecipe(recipeId, { usage_amount: normalized === '' ? 0 : toSafeNumber(normalized) });
+    };
+
+    const handleUsageBlur = (recipeId: string) => {
+        setActiveUsageId((prev) => (prev === recipeId ? null : prev));
+        const raw = usageDrafts[recipeId] ?? '';
+        void updateRecipe(recipeId, { usage_amount: raw === '' ? 0 : toSafeNumber(raw) });
+    };
 
     useEffect(() => {
         recipes.forEach((recipe) => {
@@ -27,6 +50,20 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
             }
         });
     }, [recipes, updateRecipe]);
+
+    useEffect(() => {
+        setUsageDrafts((prev) => {
+            const next: Record<string, string> = {};
+            recipes.forEach((recipe) => {
+                if (activeUsageId === recipe.id && prev[recipe.id] !== undefined) {
+                    next[recipe.id] = prev[recipe.id];
+                    return;
+                }
+                next[recipe.id] = String(toSafeNumber(recipe.usage_amount));
+            });
+            return next;
+        });
+    }, [recipes, activeUsageId]);
 
     useEffect(() => {
         let total = 0;
@@ -122,10 +159,13 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                             <div className="space-y-1">
                                                 <p className="text-[10px] text-muted-foreground">使用量</p>
                                                 <Input
-                                                    type="number"
+                                                    type="text"
+                                                    inputMode="decimal"
                                                     className="h-9 w-[96px] text-center bg-background border-border focus:border-foreground"
-                                                    value={recipe.usage_amount}
-                                                    onChange={(e) => updateRecipe(recipe.id, { usage_amount: toSafeNumber(e.target.value) })}
+                                                    value={usageDrafts[recipe.id] ?? ''}
+                                                    onFocus={() => setActiveUsageId(recipe.id)}
+                                                    onBlur={() => handleUsageBlur(recipe.id)}
+                                                    onChange={(e) => handleUsageChange(recipe.id, e.target.value)}
                                                 />
                                             </div>
                                             <div className="space-y-1">
@@ -189,10 +229,13 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                             </TableCell>
                                             <TableCell>
                                                 <Input
-                                                    type="number"
+                                                    type="text"
+                                                    inputMode="decimal"
                                                     className="h-9 w-[100px] mx-auto text-center bg-background border-border focus:border-foreground"
-                                                    value={recipe.usage_amount}
-                                                    onChange={(e) => updateRecipe(recipe.id, { usage_amount: toSafeNumber(e.target.value) })}
+                                                    value={usageDrafts[recipe.id] ?? ''}
+                                                    onFocus={() => setActiveUsageId(recipe.id)}
+                                                    onBlur={() => handleUsageBlur(recipe.id)}
+                                                    onChange={(e) => handleUsageChange(recipe.id, e.target.value)}
                                                 />
                                             </TableCell>
                                             <TableCell>
