@@ -5,18 +5,19 @@ import { RecipeEditor } from './RecipeEditor';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Input } from './ui/Input';
+import { calculateMenuMetrics, toSafeNumber } from '../lib/calculator';
 
 export const MenuPage = () => {
     const { menus, addMenu, updateMenu, deleteMenu } = useMenus();
     const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
     const selectedMenu = selectedMenuId ? menus.find(m => m.id === selectedMenuId) : null;
     const [desktopName, setDesktopName] = useState('');
-    const [desktopSalesPrice, setDesktopSalesPrice] = useState('');
+    const [desktopSalesPrice, setDesktopSalesPrice] = useState<number | null>(null);
 
     useEffect(() => {
         if (!selectedMenu) return;
         setDesktopName(selectedMenu.name);
-        setDesktopSalesPrice(selectedMenu.sales_price > 0 ? String(selectedMenu.sales_price) : '');
+        setDesktopSalesPrice(toSafeNumber(selectedMenu.sales_price) > 0 ? toSafeNumber(selectedMenu.sales_price) : null);
     }, [selectedMenu?.id, selectedMenu?.name, selectedMenu?.sales_price]);
 
     const handleAddMenu = async () => {
@@ -102,13 +103,12 @@ export const MenuPage = () => {
     }
 
     const handleTotalCostChange = (cost: number) => {
-        if (Math.abs(selectedMenu.total_cost - cost) > 1) {
-            const profit = selectedMenu.sales_price - cost;
-            const rate = selectedMenu.sales_price > 0 ? (cost / selectedMenu.sales_price) * 100 : 0;
+        const { totalCost, grossProfit, costRate } = calculateMenuMetrics(selectedMenu.sales_price, cost);
+        if (Math.abs(toSafeNumber(selectedMenu.total_cost) - totalCost) > 0.5) {
             updateMenu(selectedMenu.id, {
-                total_cost: cost,
-                gross_profit: profit,
-                cost_rate: rate
+                total_cost: totalCost,
+                gross_profit: grossProfit,
+                cost_rate: costRate
             });
         }
     };
@@ -185,11 +185,14 @@ export const MenuPage = () => {
                             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">販売価格 (円)</label>
                             <Input
                                 type="number"
-                                value={desktopSalesPrice}
-                                onChange={(e) => setDesktopSalesPrice(e.target.value)}
+                                value={desktopSalesPrice ?? ''}
+                                onChange={(e) => {
+                                    const raw = e.target.value;
+                                    setDesktopSalesPrice(raw === '' ? null : toSafeNumber(raw));
+                                }}
                                 onBlur={async () => {
-                                    const parsed = desktopSalesPrice.trim() === '' ? 0 : Number(desktopSalesPrice);
-                                    if (parsed !== selectedMenu.sales_price) {
+                                    const parsed = desktopSalesPrice ?? 0;
+                                    if (parsed !== toSafeNumber(selectedMenu.sales_price)) {
                                         await updateMenu(selectedMenu.id, { sales_price: parsed });
                                     }
                                 }}

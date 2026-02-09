@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateUnitPrice, normalizeAmount, calculateLineCost } from './calculator';
+import { calculateUnitPrice, normalizeAmount, calculateLineCost, toSafeNumber, calculateMenuMetrics } from './calculator';
 
 describe('Calculator Logic', () => {
     describe('calculateUnitPrice', () => {
@@ -58,6 +58,37 @@ describe('Calculator Logic', () => {
 
         it('handles 0 yield gracefully', () => {
             expect(calculateLineCost(100, 'g', 0, 10)).toBe(0);
+        });
+
+        it('handles large usage without string-format contamination', () => {
+            // 220200 g * 10 円/g = 2,202,000 円
+            const cost = calculateLineCost(220200, 'g', 100, 10);
+            expect(cost).toBe(2202000);
+        });
+    });
+
+    describe('toSafeNumber', () => {
+        it('parses comma-separated strings', () => {
+            expect(toSafeNumber('22,020,020,000')).toBe(22020020000);
+        });
+
+        it('returns 0 for invalid values', () => {
+            expect(toSafeNumber('abc')).toBe(0);
+            expect(toSafeNumber(undefined)).toBe(0);
+        });
+    });
+
+    describe('calculateMenuMetrics', () => {
+        it('calculates expected metrics for normal case', () => {
+            const metrics = calculateMenuMetrics(1000, 360);
+            expect(metrics.totalCost).toBe(360);
+            expect(metrics.grossProfit).toBe(640);
+            expect(metrics.costRate).toBe(36);
+        });
+
+        it('avoids divide by zero', () => {
+            const metrics = calculateMenuMetrics(0, 100);
+            expect(metrics.costRate).toBe(0);
         });
     });
 });

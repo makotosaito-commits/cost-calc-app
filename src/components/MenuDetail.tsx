@@ -3,6 +3,7 @@ import { Menu } from '../types';
 
 import { Input } from './ui/Input';
 import { Card, CardContent } from './ui/Card';
+import { calculateMenuMetrics, toSafeNumber } from '../lib/calculator';
 
 interface MenuDetailProps {
     menu: Menu;
@@ -12,13 +13,13 @@ interface MenuDetailProps {
 
 export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailProps) => {
     const [name, setName] = useState(menu.name);
-    const [salesPrice, setSalesPrice] = useState(menu.sales_price > 0 ? String(menu.sales_price) : '');
+    const [salesPrice, setSalesPrice] = useState<number | null>(toSafeNumber(menu.sales_price) > 0 ? toSafeNumber(menu.sales_price) : null);
     const [image, setImage] = useState<string | undefined>(menu.image);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setName(menu.name);
-        setSalesPrice(menu.sales_price > 0 ? String(menu.sales_price) : '');
+        setSalesPrice(toSafeNumber(menu.sales_price) > 0 ? toSafeNumber(menu.sales_price) : null);
         setImage(menu.image);
     }, [menu]);
 
@@ -39,10 +40,8 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
         }
     };
 
-    const hasSalesPrice = salesPrice.trim() !== '';
-    const numericSalesPrice = hasSalesPrice ? Number(salesPrice) : 0;
-    const grossProfit = numericSalesPrice - calculatedTotalCost;
-    const costRate = numericSalesPrice > 0 ? (calculatedTotalCost / numericSalesPrice) * 100 : 0;
+    const hasSalesPrice = salesPrice !== null;
+    const { grossProfit, costRate } = calculateMenuMetrics(salesPrice ?? 0, calculatedTotalCost);
     const rateToneClass = !hasSalesPrice
         ? 'text-muted-foreground border-border bg-muted/40'
         : costRate <= 30
@@ -109,10 +108,13 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                                     <span className="absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground">¥</span>
                                     <Input
                                         type="number"
-                                        value={salesPrice}
-                                        onChange={(e) => setSalesPrice(e.target.value)}
+                                        value={salesPrice ?? ''}
+                                        onChange={(e) => {
+                                            const raw = e.target.value;
+                                            setSalesPrice(raw === '' ? null : toSafeNumber(raw));
+                                        }}
                                         onBlur={() => {
-                                            const parsedSalesPrice = salesPrice.trim() === '' ? 0 : Number(salesPrice);
+                                            const parsedSalesPrice = salesPrice ?? 0;
                                             handleSave({ sales_price: parsedSalesPrice });
                                         }}
                                         placeholder="例: 850"

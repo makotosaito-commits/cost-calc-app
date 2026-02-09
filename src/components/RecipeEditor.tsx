@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRecipes } from '../hooks/useRecipes';
 import { useMaterials } from '../hooks/useMaterials';
-import { calculateLineCost } from '../lib/calculator';
+import { calculateLineCost, toSafeNumber } from '../lib/calculator';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './ui/Table';
@@ -32,16 +32,13 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
         let total = 0;
         recipes.forEach(recipe => {
             const material = materials.find(m => m.id === recipe.material_id);
-            if (material && material.calculated_unit_price) {
-                // Yield rate is implicitly 100% now as requested by user
-                const cost = calculateLineCost(
-                    recipe.usage_amount,
-                    recipe.usage_unit,
-                    100, // Fixed yield rate
-                    material.calculated_unit_price
-                );
-                total += cost;
-            }
+            const cost = calculateLineCost(
+                toSafeNumber(recipe.usage_amount),
+                recipe.usage_unit,
+                100,
+                toSafeNumber(material?.calculated_unit_price)
+            );
+            total += cost;
         });
         onTotalCostChange(total);
     }, [recipes, materials, onTotalCostChange]);
@@ -94,9 +91,12 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                     <div className="divide-y divide-border">
                         {recipes.map((recipe) => {
                             const material = materials.find(m => m.id === recipe.material_id);
-                            const lineCost = material && material.calculated_unit_price
-                                ? calculateLineCost(recipe.usage_amount, recipe.usage_unit, 100, material.calculated_unit_price)
-                                : 0;
+                            const lineCost = calculateLineCost(
+                                toSafeNumber(recipe.usage_amount),
+                                recipe.usage_unit,
+                                100,
+                                toSafeNumber(material?.calculated_unit_price)
+                            );
 
                             return (
                                 <div key={recipe.id} className="py-4">
@@ -125,7 +125,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                                     type="number"
                                                     className="h-9 w-[96px] text-center bg-background border-border focus:border-foreground"
                                                     value={recipe.usage_amount}
-                                                    onChange={(e) => updateRecipe(recipe.id, { usage_amount: e.target.valueAsNumber || 0 })}
+                                                    onChange={(e) => updateRecipe(recipe.id, { usage_amount: toSafeNumber(e.target.value) })}
                                                 />
                                             </div>
                                             <div className="space-y-1">
@@ -172,9 +172,12 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                             <TableBody>
                                 {recipes.map((recipe) => {
                                     const material = materials.find(m => m.id === recipe.material_id);
-                                    const lineCost = material && material.calculated_unit_price
-                                        ? calculateLineCost(recipe.usage_amount, recipe.usage_unit, 100, material.calculated_unit_price)
-                                        : 0;
+                                    const lineCost = calculateLineCost(
+                                        toSafeNumber(recipe.usage_amount),
+                                        recipe.usage_unit,
+                                        100,
+                                        toSafeNumber(material?.calculated_unit_price)
+                                    );
 
                                     return (
                                         <TableRow key={recipe.id} className="group">
@@ -189,7 +192,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                                     type="number"
                                                     className="h-9 w-[100px] mx-auto text-center bg-background border-border focus:border-foreground"
                                                     value={recipe.usage_amount}
-                                                    onChange={(e) => updateRecipe(recipe.id, { usage_amount: e.target.valueAsNumber || 0 })}
+                                                    onChange={(e) => updateRecipe(recipe.id, { usage_amount: toSafeNumber(e.target.value) })}
                                                 />
                                             </TableCell>
                                             <TableCell>

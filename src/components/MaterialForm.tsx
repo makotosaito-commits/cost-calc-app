@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMaterials } from '../hooks/useMaterials';
-import { calculateUnitPrice, normalizeAmount } from '../lib/calculator';
+import { calculateUnitPrice, normalizeAmount, toSafeNumber } from '../lib/calculator';
 import { BaseUnit } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -18,8 +18,8 @@ export const MaterialForm = () => {
 
     useEffect(() => {
         if (price && quantity && quantity > 0) {
-            const normalizedQty = normalizeAmount(Number(quantity), inputUnit);
-            const unitPrice = calculateUnitPrice(Number(price), normalizedQty);
+            const normalizedQty = normalizeAmount(toSafeNumber(quantity), inputUnit);
+            const unitPrice = calculateUnitPrice(toSafeNumber(price), normalizedQty);
             setCalculatedPrice(unitPrice);
         } else {
             setCalculatedPrice(null);
@@ -34,13 +34,13 @@ export const MaterialForm = () => {
         if (inputUnit === 'ml') baseUnit = 'ml';
         if (inputUnit === '個') baseUnit = '個';
 
-        const normalizedQty = normalizeAmount(Number(quantity), inputUnit);
-        const unitPrice = calculateUnitPrice(Number(price), normalizedQty);
+        const normalizedQty = normalizeAmount(toSafeNumber(quantity), inputUnit);
+        const unitPrice = calculateUnitPrice(toSafeNumber(price), normalizedQty);
 
         await addMaterial({
             name,
             category,
-            purchase_price: Number(price),
+            purchase_price: toSafeNumber(price),
             purchase_quantity: normalizedQty,
             base_unit: baseUnit,
             calculated_unit_price: unitPrice,
