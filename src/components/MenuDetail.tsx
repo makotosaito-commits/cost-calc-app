@@ -44,35 +44,35 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
     const grossProfit = numericSalesPrice - calculatedTotalCost;
     const costRate = numericSalesPrice > 0 ? (calculatedTotalCost / numericSalesPrice) * 100 : 0;
     const rateToneClass = !hasSalesPrice
-        ? 'text-muted-foreground border-zinc-700 bg-zinc-950/30'
+        ? 'text-muted-foreground border-border bg-muted/40'
         : costRate <= 30
-            ? 'text-green-400 border-green-500/30 bg-green-500/10'
+            ? 'text-zinc-700 border-zinc-400/50 bg-zinc-100'
             : costRate <= 45
-                ? 'text-amber-400 border-amber-500/30 bg-amber-500/10'
-                : 'text-red-400 border-red-500/30 bg-red-500/10';
+                ? 'text-zinc-800 border-zinc-500/50 bg-zinc-200'
+                : 'text-zinc-900 border-zinc-600/60 bg-zinc-300';
     const rateLabel = !hasSalesPrice ? '未入力' : (costRate <= 30 ? '良好' : (costRate <= 45 ? '注意' : '高い'));
 
     return (
         <div className="space-y-4">
-            <Card className="bg-zinc-900 border-zinc-800 shadow-2xl overflow-visible">
+            <Card className="bg-card border-border shadow-sm overflow-visible">
                 <CardContent className="p-6">
                     <div className="space-y-6">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">概要</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">概要</p>
                         <div className="flex justify-center md:block">
                             <div
-                                className="relative w-full aspect-video bg-zinc-950 rounded-xl border-2 border-dashed border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:border-zinc-600 transition-colors group"
+                                className="relative w-full aspect-video bg-muted rounded-xl border border-dashed border-border flex items-center justify-center overflow-hidden cursor-pointer hover:border-zinc-400 transition-colors group"
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 {image ? (
                                     <img src={image} alt="Menu" className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="text-center text-zinc-600 group-hover:text-zinc-400 transition-colors">
+                                    <div className="text-center text-muted-foreground transition-colors">
                                         <PhotoIcon className="h-10 w-10 mx-auto mb-2" />
                                         <span className="text-xs font-bold uppercase tracking-wider">写真を追加</span>
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <span className="text-white text-xs font-bold uppercase tracking-wider border border-white px-3 py-1 rounded-full">
+                                <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="text-foreground text-xs font-medium uppercase tracking-wider border border-border px-3 py-1 rounded-full">
                                         {image ? '変更する' : 'アップロード'}
                                     </span>
                                 </div>
@@ -100,13 +100,13 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                                         }
                                     }}
                                     placeholder="例: 牛すじ煮込み"
-                                    className="text-xl font-bold bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 border-zinc-800 rounded-none focus-visible:ring-0 focus-visible:border-primary transition-all px-1"
+                                    className="text-lg font-semibold bg-transparent border-t-0 border-l-0 border-r-0 border-b border-border rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all px-1"
                                 />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">販売価格 (円)</label>
                                 <div className="relative group">
-                                    <span className="absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">¥</span>
+                                    <span className="absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground">¥</span>
                                     <Input
                                         type="number"
                                         value={salesPrice}
@@ -116,7 +116,7 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                                             handleSave({ sales_price: parsedSalesPrice });
                                         }}
                                         placeholder="例: 850"
-                                        className="text-2xl font-black bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 border-zinc-800 rounded-none focus-visible:ring-0 focus-visible:border-primary transition-all pl-5 pr-1"
+                                        className="text-xl font-semibold bg-transparent border-t-0 border-l-0 border-r-0 border-b border-border rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all pl-5 pr-1"
                                     />
                                 </div>
                             </div>
@@ -125,9 +125,9 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                 </CardContent>
             </Card>
 
-            <Card className="bg-zinc-900 border-zinc-800 shadow-2xl">
+            <Card className="bg-card border-border shadow-sm">
                 <CardContent className="p-6 space-y-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">結果</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">結果</p>
                     <div className={`rounded-xl border p-4 ${rateToneClass}`}>
                         <div className="flex items-start justify-between">
                             <div>
@@ -137,25 +137,25 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                                     <span className="ml-1 text-lg font-bold">%</span>
                                 </p>
                             </div>
-                            <span className="text-[11px] font-bold tracking-wide rounded-full px-2 py-1 border border-current/30 bg-black/20">
+                            <span className="text-[11px] font-medium tracking-wide rounded-full px-2 py-1 border border-current/30 bg-background/50">
                                 {rateLabel}
                             </span>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800/50">
+                        <div className="bg-muted/40 rounded-xl p-4 border border-border">
                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">粗利益</p>
-                            <p className={`text-xl font-black tabular-nums ${hasSalesPrice ? (grossProfit >= 0 ? 'text-green-500' : 'text-red-500') : 'text-muted-foreground'}`}>
+                            <p className={`text-xl font-semibold tabular-nums ${hasSalesPrice ? 'text-foreground' : 'text-muted-foreground'}`}>
                                 {hasSalesPrice ? Math.round(grossProfit).toLocaleString() : '—'} <span className="text-xs font-normal">円</span>
                             </p>
                         </div>
-                        <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800/50 flex items-center justify-between">
+                        <div className="bg-muted/40 rounded-xl p-4 border border-border flex items-center justify-between">
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価合計</p>
                                 <p className="text-xl font-black text-foreground tabular-nums">{Math.round(calculatedTotalCost).toLocaleString()} <span className="text-xs font-normal">円</span></p>
                             </div>
-                            <div className="h-9 w-9 flex items-center justify-center bg-zinc-800 rounded-lg text-muted-foreground">
+                            <div className="h-9 w-9 flex items-center justify-center bg-background border border-border rounded-lg text-muted-foreground">
                                 <ReceiptIcon />
                             </div>
                         </div>

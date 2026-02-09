@@ -1,14 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMenus } from '../hooks/useMenus';
 import { MenuDetail } from './MenuDetail';
 import { RecipeEditor } from './RecipeEditor';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
+import { Input } from './ui/Input';
 
 export const MenuPage = () => {
     const { menus, addMenu, updateMenu, deleteMenu } = useMenus();
     const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
     const selectedMenu = selectedMenuId ? menus.find(m => m.id === selectedMenuId) : null;
+    const [desktopName, setDesktopName] = useState('');
+    const [desktopSalesPrice, setDesktopSalesPrice] = useState('');
+
+    useEffect(() => {
+        if (!selectedMenu) return;
+        setDesktopName(selectedMenu.name);
+        setDesktopSalesPrice(selectedMenu.sales_price > 0 ? String(selectedMenu.sales_price) : '');
+    }, [selectedMenu?.id, selectedMenu?.name, selectedMenu?.sales_price]);
 
     const handleAddMenu = async () => {
         await addMenu({
@@ -37,45 +46,43 @@ export const MenuPage = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                     {menus.map(menu => {
-                        let rateColorClass = 'text-emerald-400';
-                        if (menu.cost_rate > 45) rateColorClass = 'text-red-400';
-                        else if (menu.cost_rate > 30) rateColorClass = 'text-amber-400';
+                        let rateColorClass = 'text-zinc-700';
+                        if (menu.cost_rate > 45) rateColorClass = 'text-zinc-900';
+                        else if (menu.cost_rate > 30) rateColorClass = 'text-zinc-800';
 
                         return (
                             <Card
                                 key={menu.id}
-                                className="group relative cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all duration-300 bg-card border-border overflow-hidden"
+                                className="group cursor-pointer transition-all duration-200 bg-card border-border overflow-hidden hover:border-zinc-400/70"
                                 onClick={() => setSelectedMenuId(menu.id)}
                             >
-                                <div className="aspect-video bg-muted flex items-center justify-center text-muted-foreground transition-colors group-hover:bg-accent relative">
+                                <div className="aspect-video bg-muted flex items-center justify-center text-muted-foreground">
                                     {menu.image ? (
-                                        <img src={menu.image} alt={menu.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                        <img src={menu.image} alt={menu.name} className="w-full h-full object-cover" />
                                     ) : (
-                                        <PhotoIcon className="h-12 w-12 opacity-20" />
+                                        <PhotoIcon className="h-10 w-10 opacity-30" />
                                     )}
-                                    {/* Gradient Overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-60" />
                                 </div>
 
-                                <CardContent className="p-5 absolute bottom-0 left-0 right-0">
+                                <CardContent className="p-5">
                                     <div className="flex justify-between items-end mb-3">
-                                        <h3 className="font-bold text-xl leading-tight line-clamp-2 text-white group-hover:text-primary-foreground transition-colors drop-shadow-md">
+                                        <h3 className="font-semibold text-lg leading-tight line-clamp-2 text-foreground">
                                             {menu.name || '名称未入力'}
                                         </h3>
                                     </div>
 
                                     <div className="grid grid-cols-3 gap-2">
-                                        <div className="rounded-lg bg-black/30 border border-white/10 p-2 backdrop-blur-sm">
-                                            <p className="text-[10px] uppercase tracking-wider text-zinc-300/80">販売</p>
-                                            <p className="text-sm font-bold text-white tabular-nums">{Math.round(menu.sales_price).toLocaleString()}円</p>
+                                        <div className="rounded-lg bg-muted/60 border border-border p-2">
+                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">販売</p>
+                                            <p className="text-sm font-semibold text-foreground tabular-nums">{Math.round(menu.sales_price).toLocaleString()}円</p>
                                         </div>
-                                        <div className="rounded-lg bg-black/30 border border-white/10 p-2 backdrop-blur-sm">
-                                            <p className="text-[10px] uppercase tracking-wider text-zinc-300/80">原価</p>
-                                            <p className="text-sm font-bold text-white tabular-nums">{Math.round(menu.total_cost).toLocaleString()}円</p>
+                                        <div className="rounded-lg bg-muted/60 border border-border p-2">
+                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">原価</p>
+                                            <p className="text-sm font-semibold text-foreground tabular-nums">{Math.round(menu.total_cost).toLocaleString()}円</p>
                                         </div>
-                                        <div className="rounded-lg bg-black/30 border border-white/10 p-2 backdrop-blur-sm">
-                                            <p className="text-[10px] uppercase tracking-wider text-zinc-300/80">原価率</p>
-                                            <p className={`text-sm font-black tabular-nums ${rateColorClass}`}>{menu.cost_rate.toFixed(1)}%</p>
+                                        <div className="rounded-lg bg-muted/60 border border-border p-2">
+                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">原価率</p>
+                                            <p className={`text-sm font-semibold tabular-nums ${rateColorClass}`}>{menu.cost_rate.toFixed(1)}%</p>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -94,13 +101,29 @@ export const MenuPage = () => {
         );
     }
 
+    const handleTotalCostChange = (cost: number) => {
+        if (Math.abs(selectedMenu.total_cost - cost) > 1) {
+            const profit = selectedMenu.sales_price - cost;
+            const rate = selectedMenu.sales_price > 0 ? (cost / selectedMenu.sales_price) * 100 : 0;
+            updateMenu(selectedMenu.id, {
+                total_cost: cost,
+                gross_profit: profit,
+                cost_rate: rate
+            });
+        }
+    };
+
+    let rateColorClass = 'text-zinc-700';
+    if (selectedMenu.cost_rate > 45) rateColorClass = 'text-zinc-900';
+    else if (selectedMenu.cost_rate > 30) rateColorClass = 'text-zinc-800';
+
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in">
             <div className="flex items-center justify-between border-b border-border pb-6">
                 <Button
                     variant="ghost"
                     onClick={async () => {
-                        const trimmedName = selectedMenu.name.trim();
+                        const trimmedName = desktopName.trim() || selectedMenu.name.trim();
                         if (!trimmedName) {
                             alert('一覧に戻る前にメニュー名を入力してください。');
                             return;
@@ -125,32 +148,94 @@ export const MenuPage = () => {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-[minmax(340px,460px)_minmax(0,1fr)] gap-8 md:items-start md:h-[calc(100vh-13rem)]">
-                <div className="md:sticky md:top-6 md:pr-6">
-                    <MenuDetail
-                        menu={selectedMenu}
-                        onUpdate={updateMenu}
-                        calculatedTotalCost={selectedMenu.total_cost}
-                    />
-                </div>
-
-                <div className="md:h-full md:min-h-0 md:overflow-y-auto md:pl-6 md:border-l md:border-zinc-800/60 md:pr-1">
+            <div className="md:hidden">
+                <MenuDetail
+                    menu={selectedMenu}
+                    onUpdate={updateMenu}
+                    calculatedTotalCost={selectedMenu.total_cost}
+                />
+                <div className="mt-6">
                     <RecipeEditor
                         menuId={selectedMenu.id}
-                        onTotalCostChange={(cost) => {
-                            if (Math.abs(selectedMenu.total_cost - cost) > 1) {
-                                const profit = selectedMenu.sales_price - cost;
-                                const rate = selectedMenu.sales_price > 0 ? (cost / selectedMenu.sales_price) * 100 : 0;
-                                updateMenu(selectedMenu.id, {
-                                    total_cost: cost,
-                                    gross_profit: profit,
-                                    cost_rate: rate
-                                });
-                            }
-                        }}
+                        onTotalCostChange={handleTotalCostChange}
                     />
                 </div>
             </div>
+
+            <div className="hidden md:block space-y-6">
+                <Card className="bg-card border-border">
+                    <CardContent className="p-5 grid grid-cols-2 gap-4 items-end">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">メニュー名</label>
+                            <Input
+                                value={desktopName}
+                                onChange={(e) => setDesktopName(e.target.value)}
+                                onBlur={async () => {
+                                    const trimmed = desktopName.trim();
+                                    if (trimmed && trimmed !== selectedMenu.name) {
+                                        await updateMenu(selectedMenu.id, { name: trimmed });
+                                        setDesktopName(trimmed);
+                                    }
+                                }}
+                                placeholder="例: 牛すじ煮込み"
+                                className="text-lg font-semibold bg-background border-border"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">販売価格 (円)</label>
+                            <Input
+                                type="number"
+                                value={desktopSalesPrice}
+                                onChange={(e) => setDesktopSalesPrice(e.target.value)}
+                                onBlur={async () => {
+                                    const parsed = desktopSalesPrice.trim() === '' ? 0 : Number(desktopSalesPrice);
+                                    if (parsed !== selectedMenu.sales_price) {
+                                        await updateMenu(selectedMenu.id, { sales_price: parsed });
+                                    }
+                                }}
+                                placeholder="例: 850"
+                                className="text-lg font-semibold bg-background border-border"
+                            />
+                        </div>
+
+                        <details className="col-span-2 rounded-lg border border-border bg-muted/40 p-3">
+                            <summary className="cursor-pointer text-xs font-bold tracking-wider text-muted-foreground">写真（任意）</summary>
+                            <div className="mt-3">
+                                {selectedMenu.image ? (
+                                    <img src={selectedMenu.image} alt={selectedMenu.name || 'Menu'} className="h-40 w-auto rounded-lg border border-border object-cover" />
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">写真は未設定です（SP表示で追加できます）。</p>
+                                )}
+                            </div>
+                        </details>
+                    </CardContent>
+                </Card>
+
+                <RecipeEditor
+                    menuId={selectedMenu.id}
+                    onTotalCostChange={handleTotalCostChange}
+                />
+
+                <div className="sticky bottom-24 z-30 flex justify-end pointer-events-none">
+                    <Card className="w-full max-w-lg bg-card border-border shadow-lg pointer-events-auto">
+                        <CardContent className="p-4 grid grid-cols-3 gap-3">
+                            <div className="rounded-lg bg-muted/50 border border-border p-3">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価合計</p>
+                                <p className="text-xl font-black tabular-nums text-foreground">{Math.round(selectedMenu.total_cost).toLocaleString()}円</p>
+                            </div>
+                            <div className="rounded-lg bg-muted/50 border border-border p-3">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">粗利益</p>
+                                <p className="text-xl font-black tabular-nums text-foreground">{Math.round(selectedMenu.gross_profit).toLocaleString()}円</p>
+                            </div>
+                            <div className="rounded-lg bg-muted/50 border border-border p-3">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価率</p>
+                                <p className={`text-2xl font-black tabular-nums ${rateColorClass}`}>{selectedMenu.cost_rate.toFixed(1)}%</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+
         </div>
     );
 };

@@ -8,7 +8,7 @@ export const Card = ({ className, children, ...props }: React.HTMLAttributes<HTM
     return (
         <div
             className={cn(
-                "rounded-2xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden",
+                "rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden",
                 className
             )}
             {...props}
@@ -33,7 +33,7 @@ export const CardTitle = ({ className, children, ...props }: React.HTMLAttribute
     return (
         <h3
             className={cn(
-                "text-2xl font-semibold leading-none tracking-tight text-foreground",
+                "text-xl font-semibold leading-none tracking-tight text-foreground",
                 className
             )}
             {...props}

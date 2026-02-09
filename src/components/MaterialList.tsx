@@ -21,7 +21,7 @@ export const MaterialList = () => {
                 <span className="text-xs text-muted-foreground font-medium">{materials.length} 件の材料</span>
             </div>
 
-            <div className="md:hidden divide-y divide-zinc-800/60">
+            <div className="md:hidden divide-y divide-border">
                 {materials.map((material) => (
                     <div key={material.id} className="py-3">
                         <div className="flex items-start justify-between gap-3">
@@ -42,7 +42,7 @@ export const MaterialList = () => {
                                         deleteMaterial(material.id);
                                     }
                                 }}
-                                className="h-7 w-7 shrink-0 text-zinc-500 hover:text-destructive"
+                                className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
                                 aria-label={`${material.name} を削除`}
                             >
                                 <TrashIcon className="h-3.5 w-3.5" />

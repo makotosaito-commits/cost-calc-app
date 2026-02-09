@@ -14,8 +14,7 @@ export const BottomNav = ({ currentView, onChange }: BottomNavProps) => {
 
     return (
         <div
-            className="fixed bottom-2 md:bottom-0 left-0 right-0 border-t border-border bg-background/80 backdrop-blur-md z-50"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.2)' }}
+            className="fixed left-2 right-2 bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] md:left-0 md:right-0 md:bottom-0 border border-border md:border-t md:border-x-0 md:border-b-0 rounded-xl md:rounded-none bg-card/95 backdrop-blur-md z-50 pb-[calc(env(safe-area-inset-bottom,0px)*0.1)] md:pb-0"
         >
             <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-4">
                 {tabs.map((tab) => (
@@ -23,11 +22,11 @@ export const BottomNav = ({ currentView, onChange }: BottomNavProps) => {
                         key={tab.id}
                         onClick={() => onChange(tab.id)}
                         className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all duration-200 ${currentView === tab.id
-                            ? 'text-primary scale-110'
+                            ? 'text-foreground'
                             : 'text-muted-foreground hover:text-foreground'
                             }`}
                     >
-                        <div className={`p-1 rounded-md transition-colors ${currentView === tab.id ? 'bg-primary/10' : ''}`}>
+                        <div className={`p-1 rounded-md transition-colors ${currentView === tab.id ? 'bg-muted' : ''}`}>
                             {tab.icon}
                         </div>
                         <span className={`text-[10px] font-bold tracking-wider uppercase transition-all ${currentView === tab.id ? 'opacity-100' : 'opacity-60'}`}>

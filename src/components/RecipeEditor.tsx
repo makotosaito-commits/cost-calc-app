@@ -62,15 +62,15 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
     };
 
     return (
-        <div className="space-y-6 rounded-2xl border border-zinc-800/60 bg-zinc-950/30 p-4 md:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-            <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">作業エリア</p>
+        <div className="recipe-editor space-y-4 md:space-y-6 rounded-xl border border-border bg-card p-3 md:p-5">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">作業エリア</p>
             </div>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h3 className="text-xl font-bold text-foreground">レシピ構成</h3>
                 <div className="flex gap-2">
                     <select
-                        className="flex h-10 w-full md:w-[240px] rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="flex h-10 w-full md:w-[240px] rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         value={selectedMaterialId}
                         onChange={(e) => setSelectedMaterialId(e.target.value)}
                     >
@@ -87,11 +87,11 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                 </div>
             </div>
 
-            <div className="md:hidden">
+            <div className="sp-material-list">
                 {recipes.length === 0 ? (
                     <p className="text-sm text-muted-foreground">レシピはまだありません。材料を追加してください。</p>
                 ) : (
-                    <div className="divide-y divide-zinc-800/60">
+                    <div className="divide-y divide-border">
                         {recipes.map((recipe) => {
                             const material = materials.find(m => m.id === recipe.material_id);
                             const lineCost = material && material.calculated_unit_price
@@ -111,9 +111,9 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => deleteRecipe(recipe.id)}
-                                            className="h-8 w-8 text-zinc-500 hover:text-red-500"
+                                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
                                         >
-                                            <TrashIcon className="h-4 w-4" />
+                                            <TrashIcon className="h-3.5 w-3.5" />
                                         </Button>
                                     </div>
 
@@ -123,7 +123,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                                 <p className="text-[10px] text-muted-foreground">使用量</p>
                                                 <Input
                                                     type="number"
-                                                    className="h-9 w-[96px] text-center bg-zinc-950 border-zinc-800 focus:border-primary"
+                                                    className="h-9 w-[96px] text-center bg-background border-border focus:border-foreground"
                                                     value={recipe.usage_amount}
                                                     onChange={(e) => updateRecipe(recipe.id, { usage_amount: e.target.valueAsNumber || 0 })}
                                                 />
@@ -131,7 +131,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                             <div className="space-y-1">
                                                 <p className="text-[10px] text-muted-foreground">単位</p>
                                                 <select
-                                                    className="h-9 w-[72px] rounded-md border border-zinc-800 bg-zinc-950 text-sm text-center focus:ring-2 focus:ring-ring outline-none"
+                                                    className="h-9 w-[72px] rounded-xl border border-input bg-background text-sm text-center focus:ring-2 focus:ring-ring outline-none"
                                                     value={recipe.usage_unit}
                                                     onChange={(e) => updateRecipe(recipe.id, { usage_unit: e.target.value })}
                                                 >
@@ -156,11 +156,11 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                 )}
             </div>
 
-            <div className="hidden md:block">
-                <Card className="bg-zinc-900/20 border-zinc-800 p-0">
+            <div className="recipe-material-table-wrap hidden md:block">
+                <Card className="bg-card border-border p-0">
                     <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-zinc-950/50">
+                        <Table className="recipe-material-table">
+                            <TableHeader className="bg-muted/40">
                                 <TableRow className="hover:bg-transparent">
                                     <TableHead>使用材料</TableHead>
                                     <TableHead className="w-[120px] text-center">使用量</TableHead>
@@ -177,7 +177,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                         : 0;
 
                                     return (
-                                        <TableRow key={recipe.id} className="border-zinc-800/50 group">
+                                        <TableRow key={recipe.id} className="group">
                                             <TableCell className="font-bold py-4">
                                                 {material?.name || 'Unknown'}
                                                 <p className="text-[10px] text-muted-foreground font-normal">
@@ -187,14 +187,14 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                             <TableCell>
                                                 <Input
                                                     type="number"
-                                                    className="h-9 w-[100px] mx-auto text-center bg-zinc-950 border-zinc-800 focus:border-primary"
+                                                    className="h-9 w-[100px] mx-auto text-center bg-background border-border focus:border-foreground"
                                                     value={recipe.usage_amount}
                                                     onChange={(e) => updateRecipe(recipe.id, { usage_amount: e.target.valueAsNumber || 0 })}
                                                 />
                                             </TableCell>
                                             <TableCell>
                                                 <select
-                                                    className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-950 text-sm text-center focus:ring-2 focus:ring-ring outline-none"
+                                                    className="h-9 w-full rounded-xl border border-input bg-background text-sm text-center focus:ring-2 focus:ring-ring outline-none"
                                                     value={recipe.usage_unit}
                                                     onChange={(e) => updateRecipe(recipe.id, { usage_unit: e.target.value })}
                                                 >
@@ -207,7 +207,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                                 {Math.round(lineCost).toLocaleString()}
                                             </TableCell>
                                             <TableCell>
-                                                <Button variant="ghost" size="icon" onClick={() => deleteRecipe(recipe.id)} className="text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="icon" onClick={() => deleteRecipe(recipe.id)} className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <TrashIcon className="h-4 w-4" />
                                                 </Button>
                                             </TableCell>
