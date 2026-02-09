@@ -9,19 +9,20 @@ import { Badge } from './ui/Badge';
 export const MenuPage = () => {
     const { menus, addMenu, updateMenu, deleteMenu } = useMenus();
     const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
+    const selectedMenu = selectedMenuId ? menus.find(m => m.id === selectedMenuId) : null;
+
+    const handleAddMenu = async () => {
+        await addMenu({
+            name: '新規メニュー',
+            sales_price: 0,
+            total_cost: 0,
+            gross_profit: 0,
+            cost_rate: 0
+        });
+    };
 
     // Dashboard view
-    if (!selectedMenuId) {
-        const handleAddMenu = async () => {
-            await addMenu({
-                name: '新規メニュー',
-                sales_price: 0,
-                total_cost: 0,
-                gross_profit: 0,
-                cost_rate: 0
-            });
-        };
-
+    if (!selectedMenu) {
         return (
             <div className="space-y-8 animate-in">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -83,13 +84,6 @@ export const MenuPage = () => {
                 </div>
             </div>
         );
-    }
-
-    // Edit Mode
-    const selectedMenu = menus.find(m => m.id === selectedMenuId);
-    if (!selectedMenu) {
-        setSelectedMenuId(null);
-        return null;
     }
 
     return (
