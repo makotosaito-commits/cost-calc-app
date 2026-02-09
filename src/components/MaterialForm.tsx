@@ -55,12 +55,12 @@ export const MaterialForm = () => {
 
     return (
         <Card className="w-full bg-card border-border shadow-xl overflow-visible">
-            <CardHeader className="pb-4">
-                <CardTitle className="text-xl">材料を登録</CardTitle>
+            <CardHeader className="p-4 md:p-6 pb-3 md:pb-4">
+                <CardTitle className="text-xl md:text-xl">材料を登録</CardTitle>
                 <p className="text-xs text-muted-foreground">新しい仕入れ情報を入力してください。</p>
             </CardHeader>
-            <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-5">
+            <CardContent className="p-4 md:p-6 pt-0">
+                <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
                     <div className="space-y-1.5">
                         <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">名前</label>
                         <Input

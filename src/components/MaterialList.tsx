@@ -8,20 +8,51 @@ export const MaterialList = () => {
 
     if (!materials || materials.length === 0) {
         return (
-            <div className="text-center py-12 text-muted-foreground bg-card/20 border-2 border-dashed border-border rounded-2xl">
-                <p>登録された材料がありません</p>
+            <div className="py-6 text-sm text-muted-foreground">
+                登録済みの材料はありません。
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 animate-in xl:flex xl:flex-col xl:min-h-0 xl:h-full">
+        <div className="space-y-4 md:space-y-6 animate-in xl:flex xl:flex-col xl:min-h-0 xl:h-full">
             <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-foreground">登録済み材料</h3>
                 <span className="text-xs text-muted-foreground font-medium">{materials.length} 件の材料</span>
             </div>
 
-            <Card className="bg-card/50 border-border p-0 xl:flex-1 xl:min-h-0">
+            <div className="md:hidden divide-y divide-zinc-800/60">
+                {materials.map((material) => (
+                    <div key={material.id} className="py-3">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="font-bold text-foreground truncate">{material.name}</p>
+                                <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                                    {material.purchase_price.toLocaleString()}円 / {material.purchase_quantity}{material.base_unit}
+                                </p>
+                                <p className="text-xs text-muted-foreground tabular-nums">
+                                    単価 {Math.round(material.calculated_unit_price ?? 0).toLocaleString()}円/{material.base_unit}
+                                </p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                    if (confirm(`${material.name} を削除しますか？`)) {
+                                        deleteMaterial(material.id);
+                                    }
+                                }}
+                                className="h-7 w-7 shrink-0 text-zinc-500 hover:text-destructive"
+                                aria-label={`${material.name} を削除`}
+                            >
+                                <TrashIcon className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <Card className="hidden md:block bg-card/50 border-border p-0 xl:flex-1 xl:min-h-0">
                 <div className="overflow-x-auto xl:h-full xl:overflow-y-auto">
                     <Table>
                         <TableHeader className="bg-background border-none xl:sticky xl:top-0 xl:z-10 xl:backdrop-blur-sm">
@@ -61,7 +92,7 @@ export const MaterialList = () => {
                                             size="icon"
                                             onClick={() => {
                                                 if (confirm(`${material.name} を削除しますか？`)) {
-                                                    deleteMaterial(material.id)
+                                                    deleteMaterial(material.id);
                                                 }
                                             }}
                                             className="text-muted-foreground hover:text-destructive"

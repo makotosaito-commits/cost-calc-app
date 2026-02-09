@@ -14,8 +14,8 @@ export const BottomNav = ({ currentView, onChange }: BottomNavProps) => {
 
     return (
         <div
-            className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/80 backdrop-blur-md z-50"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.35)' }}
+            className="fixed bottom-2 md:bottom-0 left-0 right-0 border-t border-border bg-background/80 backdrop-blur-md z-50"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.2)' }}
         >
             <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-4">
                 {tabs.map((tab) => (
