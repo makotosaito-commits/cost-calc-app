@@ -54,7 +54,7 @@ export const MaterialForm = () => {
     };
 
     return (
-        <Card className="max-w-lg mx-auto bg-card border-border shadow-xl overflow-visible">
+        <Card className="w-full bg-card border-border shadow-xl overflow-visible">
             <CardHeader className="pb-4">
                 <CardTitle className="text-xl">材料を登録</CardTitle>
                 <p className="text-xs text-muted-foreground">新しい仕入れ情報を入力してください。</p>
