@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useRecipes } from '../hooks/useRecipes';
 import { useMaterials } from '../hooks/useMaterials';
-import { calculateLineCost, toSafeNumber } from '../lib/calculator';
+import { calculateLineCost, calculateUnitPrice, normalizeAmount, toSafeNumber } from '../lib/calculator';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './ui/Table';
 import { Card } from './ui/Card';
+import { Material } from '../types';
 
 interface RecipeEditorProps {
     menuId: string;
@@ -69,11 +70,12 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
         let total = 0;
         recipes.forEach(recipe => {
             const material = materials.find(m => m.id === recipe.material_id);
+            const unitPrice = getMaterialUnitPrice(material);
             const cost = calculateLineCost(
                 toSafeNumber(recipe.usage_amount),
                 recipe.usage_unit,
                 100,
-                toSafeNumber(material?.calculated_unit_price)
+                unitPrice
             );
             total += cost;
         });
@@ -121,18 +123,19 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                 </div>
             </div>
 
-            <div className="sp-material-list">
+            <div className="sp-material-list md:hidden">
                 {recipes.length === 0 ? (
                     <p className="text-sm text-muted-foreground">レシピはまだありません。材料を追加してください。</p>
                 ) : (
                     <div className="divide-y divide-border">
                         {recipes.map((recipe) => {
                             const material = materials.find(m => m.id === recipe.material_id);
+                            const unitPrice = getMaterialUnitPrice(material);
                             const lineCost = calculateLineCost(
                                 toSafeNumber(recipe.usage_amount),
                                 recipe.usage_unit,
                                 100,
-                                toSafeNumber(material?.calculated_unit_price)
+                                unitPrice
                             );
 
                             return (
@@ -141,7 +144,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                         <div>
                                             <p className="font-bold text-foreground">{material?.name || 'Unknown'}</p>
                                             <p className="text-[10px] text-muted-foreground">
-                                                単価: {material?.calculated_unit_price?.toFixed(3)} 円/{material?.base_unit}
+                                                単価: {unitPrice.toFixed(3)} 円/{normalizeBaseUnit(material?.base_unit)}
                                             </p>
                                         </div>
                                         <Button
@@ -212,11 +215,12 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                             <TableBody>
                                 {recipes.map((recipe) => {
                                     const material = materials.find(m => m.id === recipe.material_id);
+                                    const unitPrice = getMaterialUnitPrice(material);
                                     const lineCost = calculateLineCost(
                                         toSafeNumber(recipe.usage_amount),
                                         recipe.usage_unit,
                                         100,
-                                        toSafeNumber(material?.calculated_unit_price)
+                                        unitPrice
                                     );
 
                                     return (
@@ -224,7 +228,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                             <TableCell className="font-bold py-4">
                                                 {material?.name || 'Unknown'}
                                                 <p className="text-[10px] text-muted-foreground font-normal">
-                                                    単価: {material?.calculated_unit_price?.toFixed(3)} 円/{material?.base_unit}
+                                                    単価: {unitPrice.toFixed(3)} 円/{normalizeBaseUnit(material?.base_unit)}
                                                 </p>
                                             </TableCell>
                                             <TableCell>
@@ -277,3 +281,19 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
 const TrashIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
 );
+    const normalizeBaseUnit = (unit?: string) => {
+        if (!unit) return 'g';
+        const lower = unit.toLowerCase();
+        if (lower === 'kg') return 'g';
+        if (lower === 'l') return 'ml';
+        return unit;
+    };
+
+    const getMaterialUnitPrice = (material?: Material) => {
+        if (!material) return 0;
+        const normalizedQty = normalizeAmount(toSafeNumber(material.purchase_quantity), material.base_unit);
+        if (normalizedQty > 0) {
+            return calculateUnitPrice(toSafeNumber(material.purchase_price), normalizedQty);
+        }
+        return toSafeNumber(material.calculated_unit_price);
+    };

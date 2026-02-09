@@ -7,6 +7,14 @@ describe('Calculator Logic', () => {
             expect(calculateUnitPrice(1000, 500)).toBe(2); // 1000円 / 500g = 2円/g
         });
 
+        it('calculates onion example (1000円 / 20g = 50円/g)', () => {
+            expect(calculateUnitPrice(1000, 20)).toBe(50);
+        });
+
+        it('calculates beef example (15000円 / 5000g = 3円/g)', () => {
+            expect(calculateUnitPrice(15000, 5000)).toBe(3);
+        });
+
         it('returns 0 if quantity is 0', () => {
             expect(calculateUnitPrice(1000, 0)).toBe(0);
         });
@@ -64,6 +72,11 @@ describe('Calculator Logic', () => {
             // 220200 g * 10 円/g = 2,202,000 円
             const cost = calculateLineCost(220200, 'g', 100, 10);
             expect(cost).toBe(2202000);
+        });
+
+        it('calculates cost from unit price and usage (3円/g * 200g)', () => {
+            const cost = calculateLineCost(200, 'g', 100, 3);
+            expect(cost).toBe(600);
         });
     });
 
