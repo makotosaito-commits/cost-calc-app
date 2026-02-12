@@ -27,12 +27,6 @@ const resolvePostAuthView = (fromView: string | null): AppView => {
     if (isAppView(fromView)) {
         return fromView;
     }
-
-    const storedView = window.localStorage.getItem(LAST_VIEW_KEY);
-    if (storedView === 'menus' || storedView === 'materials') {
-        return storedView;
-    }
-
     return 'menus';
 };
 
