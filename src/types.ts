@@ -13,6 +13,7 @@ export interface Material {
 
 export interface Menu {
     id: string;
+    user_id: string;
     name: string;
     sales_price: number;
     total_cost: number;
@@ -23,6 +24,7 @@ export interface Menu {
 
 export interface Recipe {
     id: string;
+    user_id: string;
     menu_id: string;
     material_id: string;
     usage_amount: number;

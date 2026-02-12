@@ -89,3 +89,32 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- ------------------------------------------------------------
+-- Migration notes for current app schema (menus/recipes split by user)
+-- ------------------------------------------------------------
+
+alter table if exists menus
+  add column if not exists sales_price numeric default 0,
+  add column if not exists total_cost numeric default 0,
+  add column if not exists gross_profit numeric default 0,
+  add column if not exists cost_rate numeric default 0,
+  add column if not exists image text;
+
+alter table if exists recipes
+  add column if not exists user_id uuid references auth.users not null default auth.uid(),
+  add column if not exists usage_amount numeric default 0,
+  add column if not exists usage_unit text default 'g',
+  add column if not exists yield_rate numeric default 100;
+
+alter table if exists menus enable row level security;
+alter table if exists recipes enable row level security;
+
+drop policy if exists "Users can crud own menus" on menus;
+create policy "Users can crud own menus" on menus for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "Users can view recipes of own menus" on recipes;
+drop policy if exists "Users can insert recipes to own menus" on recipes;
+drop policy if exists "Users can update recipes of own menus" on recipes;
+drop policy if exists "Users can delete recipes of own menus" on recipes;
+create policy "Users can crud own recipes" on recipes for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

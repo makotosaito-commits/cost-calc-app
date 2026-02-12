@@ -59,6 +59,31 @@ export const SettingsPage = () => {
 
     const handleReset = async () => {
         if (confirm('本当にすべてのデータを削除しますか？この操作は取り消せません。')) {
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (userError || !userData.user) {
+                alert('ログイン状態を確認できません。');
+                return;
+            }
+
+            const userId = userData.user.id;
+            const recipeRes = await supabase.from('recipes').delete().eq('user_id', userId);
+            if (recipeRes.error) {
+                alert(`レシピ削除に失敗: ${recipeRes.error.message}`);
+                return;
+            }
+
+            const menuRes = await supabase.from('menus').delete().eq('user_id', userId);
+            if (menuRes.error) {
+                alert(`メニュー削除に失敗: ${menuRes.error.message}`);
+                return;
+            }
+
+            const materialRes = await supabase.from('materials').delete().eq('user_id', userId);
+            if (materialRes.error) {
+                alert(`材料削除に失敗: ${materialRes.error.message}`);
+                return;
+            }
+
             await db.transaction('rw', db.materials, db.menus, db.recipes, async () => {
                 await db.materials.clear();
                 await db.menus.clear();

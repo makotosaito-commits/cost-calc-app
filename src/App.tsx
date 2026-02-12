@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { MaterialForm } from './components/MaterialForm';
 import { MaterialList } from './components/MaterialList';
@@ -6,6 +6,7 @@ import { MenuPage } from './components/MenuPage';
 import { SettingsPage } from './components/SettingsPage';
 import { AuthPage } from './components/AuthPage';
 import { Layout } from './components/Layout';
+import { db } from './lib/db';
 import { supabase } from './lib/supabase';
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
     const [session, setSession] = useState<Session | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [authError, setAuthError] = useState<string | null>(null);
+    const currentUserIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         let mounted = true;
@@ -24,6 +26,7 @@ function App() {
                 setAuthError(error.message);
             }
             setSession(data.session);
+            currentUserIdRef.current = data.session?.user?.id ?? null;
             setAuthLoading(false);
         };
 
@@ -32,6 +35,15 @@ function App() {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+            const nextUserId = nextSession?.user?.id ?? null;
+            const previousUserId = currentUserIdRef.current;
+            if (previousUserId !== nextUserId) {
+                void db.transaction('rw', db.menus, db.recipes, async () => {
+                    await db.menus.clear();
+                    await db.recipes.clear();
+                });
+            }
+            currentUserIdRef.current = nextUserId;
             setAuthError(null);
             setSession(nextSession);
             setAuthLoading(false);
