@@ -4,12 +4,16 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 
-export const AuthPage = () => {
+interface AuthPageProps {
+    initialMessage?: string;
+}
+
+export const AuthPage = ({ initialMessage }: AuthPageProps) => {
     const [mode, setMode] = useState<'login' | 'signup'>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState<string | null>(null);
+    const [message, setMessage] = useState<string | null>(initialMessage ?? null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

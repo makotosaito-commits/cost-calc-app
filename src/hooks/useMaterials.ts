@@ -67,15 +67,6 @@ export const useMaterials = () => {
 
     useEffect(() => {
         void fetchMaterials();
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange(() => {
-            void fetchMaterials();
-        });
-
-        return () => {
-            subscription.unsubscribe();
-        };
     }, [fetchMaterials]);
 
     const addMaterial = async (material: Omit<Material, 'id'>) => {

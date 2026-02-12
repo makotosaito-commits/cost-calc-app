@@ -12,13 +12,17 @@ function App() {
     const [view, setView] = useState<'menus' | 'materials' | 'settings'>('menus');
     const [session, setSession] = useState<Session | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
+    const [authError, setAuthError] = useState<string | null>(null);
 
     useEffect(() => {
         let mounted = true;
 
         const initializeAuth = async () => {
-            const { data } = await supabase.auth.getSession();
+            const { data, error } = await supabase.auth.getSession();
             if (!mounted) return;
+            if (error) {
+                setAuthError(error.message);
+            }
             setSession(data.session);
             setAuthLoading(false);
         };
@@ -28,6 +32,7 @@ function App() {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+            setAuthError(null);
             setSession(nextSession);
             setAuthLoading(false);
         });
@@ -70,7 +75,7 @@ function App() {
     }
 
     if (!session) {
-        return <AuthPage />;
+        return <AuthPage initialMessage={authError ?? undefined} />;
     }
 
     return (
