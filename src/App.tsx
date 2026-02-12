@@ -9,8 +9,35 @@ import { Layout } from './components/Layout';
 import { db } from './lib/db';
 import { supabase } from './lib/supabase';
 
+type AppView = 'menus' | 'materials' | 'settings';
+const LAST_VIEW_KEY = 'costcalc:lastView';
+const POST_AUTH_FROM_KEY = 'costcalc:postAuthView';
+
+const isAppView = (value: string | null): value is AppView => (
+    value === 'menus' || value === 'materials' || value === 'settings'
+);
+
+const consumePostAuthView = (): string | null => {
+    const from = window.localStorage.getItem(POST_AUTH_FROM_KEY);
+    window.localStorage.removeItem(POST_AUTH_FROM_KEY);
+    return from;
+};
+
+const resolvePostAuthView = (fromView: string | null): AppView => {
+    if (isAppView(fromView)) {
+        return fromView;
+    }
+
+    const storedView = window.localStorage.getItem(LAST_VIEW_KEY);
+    if (storedView === 'menus' || storedView === 'materials') {
+        return storedView;
+    }
+
+    return 'menus';
+};
+
 function App() {
-    const [view, setView] = useState<'menus' | 'materials' | 'settings'>('menus');
+    const [view, setView] = useState<AppView>('menus');
     const [session, setSession] = useState<Session | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [authError, setAuthError] = useState<string | null>(null);
@@ -27,6 +54,7 @@ function App() {
             }
             setSession(data.session);
             currentUserIdRef.current = data.session?.user?.id ?? null;
+            setView(data.session ? resolvePostAuthView(consumePostAuthView()) : 'menus');
             setAuthLoading(false);
         };
 
@@ -46,6 +74,7 @@ function App() {
             currentUserIdRef.current = nextUserId;
             setAuthError(null);
             setSession(nextSession);
+            setView(nextSession ? resolvePostAuthView(consumePostAuthView()) : 'menus');
             setAuthLoading(false);
         });
 
@@ -90,8 +119,15 @@ function App() {
         return <AuthPage initialMessage={authError ?? undefined} />;
     }
 
+    const handleChangeView = (nextView: AppView) => {
+        setView(nextView);
+        if (nextView === 'menus' || nextView === 'materials') {
+            window.localStorage.setItem(LAST_VIEW_KEY, nextView);
+        }
+    };
+
     return (
-        <Layout currentView={view} onChangeView={setView}>
+        <Layout currentView={view} onChangeView={handleChangeView}>
             {renderContent()}
         </Layout>
     );
