@@ -2,6 +2,7 @@ import { db } from '../lib/db';
 import { useEffect, useState } from 'react';
 import { useCostRateSettings } from '../contexts/CostRateSettingsContext';
 import { DEFAULT_COST_RATE_SETTINGS } from '../lib/costRateSettings';
+import { supabase } from '../lib/supabase';
 import { Button } from './ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
 import { Input } from './ui/Input';
@@ -64,6 +65,13 @@ export const SettingsPage = () => {
                 await db.recipes.clear();
             });
             alert('データを初期化しました。');
+        }
+    };
+
+    const handleLogout = async () => {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            alert(`ログアウトに失敗しました: ${error.message}`);
         }
     };
 
@@ -134,6 +142,17 @@ export const SettingsPage = () => {
                     </p>
                     <Button variant="destructive" onClick={handleReset} className="w-full sm:w-auto font-bold uppercase tracking-wider px-8">
                         すべてのデータをリセット
+                    </Button>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border shadow-xl">
+                <CardHeader className="border-b border-border pb-4">
+                    <CardTitle className="text-lg">アカウント</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                    <Button variant="outline" onClick={handleLogout}>
+                        ログアウト
                     </Button>
                 </CardContent>
             </Card>

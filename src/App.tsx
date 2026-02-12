@@ -1,12 +1,42 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Session } from '@supabase/supabase-js';
 import { MaterialForm } from './components/MaterialForm';
 import { MaterialList } from './components/MaterialList';
 import { MenuPage } from './components/MenuPage';
 import { SettingsPage } from './components/SettingsPage';
+import { AuthPage } from './components/AuthPage';
 import { Layout } from './components/Layout';
+import { supabase } from './lib/supabase';
 
 function App() {
     const [view, setView] = useState<'menus' | 'materials' | 'settings'>('menus');
+    const [session, setSession] = useState<Session | null>(null);
+    const [authLoading, setAuthLoading] = useState(true);
+
+    useEffect(() => {
+        let mounted = true;
+
+        const initializeAuth = async () => {
+            const { data } = await supabase.auth.getSession();
+            if (!mounted) return;
+            setSession(data.session);
+            setAuthLoading(false);
+        };
+
+        initializeAuth();
+
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+            setSession(nextSession);
+            setAuthLoading(false);
+        });
+
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
+    }, []);
 
     const renderContent = () => {
         switch (view) {
@@ -34,6 +64,14 @@ function App() {
                 return <MenuPage />;
         }
     };
+
+    if (authLoading) {
+        return <div className="min-h-dvh w-full flex items-center justify-center text-muted-foreground">認証状態を確認中...</div>;
+    }
+
+    if (!session) {
+        return <AuthPage />;
+    }
 
     return (
         <Layout currentView={view} onChangeView={setView}>
