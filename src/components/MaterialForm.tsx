@@ -88,6 +88,11 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
         resetForm();
     };
 
+    const handleCancelEdit = () => {
+        resetForm();
+        onFinishEdit();
+    };
+
     return (
         <Card className="w-full bg-card border-border shadow-xl overflow-visible">
             <CardHeader className="p-4 md:p-6 pb-3 md:pb-4">
@@ -175,9 +180,25 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                         </div>
                     </div>
 
-                    <Button type="submit" className="w-full font-black uppercase tracking-widest h-12">
-                        {editingMaterial ? 'この内容で更新' : 'この内容で登録'}
-                    </Button>
+                    {editingMaterial ? (
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={handleCancelEdit}
+                                className="w-full font-black uppercase tracking-widest h-12"
+                            >
+                                編集をキャンセル
+                            </Button>
+                            <Button type="submit" className="w-full font-black uppercase tracking-widest h-12">
+                                この内容で更新
+                            </Button>
+                        </div>
+                    ) : (
+                        <Button type="submit" className="w-full font-black uppercase tracking-widest h-12">
+                            この内容で登録
+                        </Button>
+                    )}
                 </form>
             </CardContent>
         </Card>
