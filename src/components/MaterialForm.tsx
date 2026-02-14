@@ -1,20 +1,45 @@
 import { useState, useEffect } from 'react';
 import { useMaterials } from '../hooks/useMaterials';
 import { calculateUnitPrice, normalizeAmount, toSafeNumber } from '../lib/calculator';
-import { BaseUnit } from '../types';
+import { BaseUnit, Material } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
 import { SegmentedControl } from './ui/SegmentedControl';
 
-export const MaterialForm = () => {
-    const { addMaterial } = useMaterials();
+type MaterialFormProps = {
+    editingMaterial: Material | null;
+    onFinishEdit: () => void;
+};
+
+export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProps) => {
+    const { addMaterial, updateMaterial } = useMaterials();
     const [name, setName] = useState('');
     const [category, setCategory] = useState('');
     const [price, setPrice] = useState<number | ''>('');
     const [quantity, setQuantity] = useState<number | ''>('');
     const [inputUnit, setInputUnit] = useState('g');
     const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
+
+    const resetForm = () => {
+        setName('');
+        setCategory('');
+        setPrice('');
+        setQuantity('');
+        setInputUnit('g');
+    };
+
+    useEffect(() => {
+        if (!editingMaterial) {
+            return;
+        }
+
+        setName(editingMaterial.name);
+        setCategory(editingMaterial.category);
+        setPrice(toSafeNumber(editingMaterial.purchase_price));
+        setQuantity(toSafeNumber(editingMaterial.purchase_quantity));
+        setInputUnit(editingMaterial.base_unit);
+    }, [editingMaterial]);
 
     useEffect(() => {
         if (price && quantity && quantity > 0) {
@@ -37,6 +62,20 @@ export const MaterialForm = () => {
         const normalizedQty = normalizeAmount(toSafeNumber(quantity), inputUnit);
         const unitPrice = calculateUnitPrice(toSafeNumber(price), normalizedQty);
 
+        if (editingMaterial) {
+            await updateMaterial(editingMaterial.id, {
+                name,
+                category,
+                purchase_price: toSafeNumber(price),
+                purchase_quantity: normalizedQty,
+                base_unit: baseUnit,
+                calculated_unit_price: unitPrice,
+            });
+            resetForm();
+            onFinishEdit();
+            return;
+        }
+
         await addMaterial({
             name,
             category,
@@ -46,11 +85,7 @@ export const MaterialForm = () => {
             calculated_unit_price: unitPrice,
         });
 
-        setName('');
-        setCategory('');
-        setPrice('');
-        setQuantity('');
-        setInputUnit('g');
+        resetForm();
     };
 
     return (
@@ -141,7 +176,7 @@ export const MaterialForm = () => {
                     </div>
 
                     <Button type="submit" className="w-full font-black uppercase tracking-widest h-12">
-                        この内容で登録
+                        {editingMaterial ? 'この内容で更新' : 'この内容で登録'}
                     </Button>
                 </form>
             </CardContent>

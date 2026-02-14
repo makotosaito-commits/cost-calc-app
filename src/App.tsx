@@ -8,6 +8,7 @@ import { AuthPage } from './components/AuthPage';
 import { Layout } from './components/Layout';
 import { db } from './lib/db';
 import { supabase } from './lib/supabase';
+import { Material } from './types';
 
 type AppView = 'menus' | 'materials' | 'settings';
 const LAST_VIEW_KEY = 'costcalc:lastView';
@@ -35,6 +36,7 @@ function App() {
     const [session, setSession] = useState<Session | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [authError, setAuthError] = useState<string | null>(null);
+    const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
     const currentUserIdRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -88,9 +90,12 @@ function App() {
                         <h2 className="text-lg md:text-2xl font-semibold text-foreground">材料管理</h2>
                         <div className="grid grid-cols-1 xl:grid-cols-[minmax(360px,420px)_minmax(0,1fr)] gap-6 items-start">
                             <div className="xl:sticky xl:top-6">
-                                <MaterialForm />
+                                <MaterialForm
+                                    editingMaterial={editingMaterial}
+                                    onFinishEdit={() => setEditingMaterial(null)}
+                                />
                             </div>
-                            <MaterialList />
+                            <MaterialList onEdit={setEditingMaterial} />
                         </div>
                     </div>
                 );

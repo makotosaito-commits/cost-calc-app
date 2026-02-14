@@ -3,8 +3,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { calculateUnitPrice, normalizeAmount, toSafeNumber } from '../lib/calculator';
+import { Material } from '../types';
 
-export const MaterialList = () => {
+type MaterialListProps = {
+    onEdit: (material: Material) => void;
+};
+
+export const MaterialList = ({ onEdit }: MaterialListProps) => {
     const { materials, deleteMaterial } = useMaterials();
     const getUnitPrice = (price: number, quantity: number, unit: string, fallback?: number) => {
         const normalizedQty = normalizeAmount(toSafeNumber(quantity), unit);
@@ -43,6 +48,15 @@ export const MaterialList = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
+                                onClick={() => onEdit(material)}
+                                className="h-6 w-6 shrink-0 self-center text-muted-foreground hover:text-foreground"
+                                aria-label={`${material.name} を編集`}
+                            >
+                                <PencilIcon className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => {
                                     if (confirm(`${material.name} を削除しますか？`)) {
                                         deleteMaterial(material.id);
@@ -67,6 +81,7 @@ export const MaterialList = () => {
                                 <TableHead>カテゴリ</TableHead>
                                 <TableHead className="text-right">仕入詳細</TableHead>
                                 <TableHead className="text-right">基準単価</TableHead>
+                                <TableHead className="w-[60px]"></TableHead>
                                 <TableHead className="w-[60px]"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -96,6 +111,17 @@ export const MaterialList = () => {
                                         <Button
                                             variant="ghost"
                                             size="icon"
+                                            onClick={() => onEdit(material)}
+                                            className="text-muted-foreground hover:text-foreground"
+                                            aria-label={`${material.name} を編集`}
+                                        >
+                                            <PencilIcon className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
                                             onClick={() => {
                                                 if (confirm(`${material.name} を削除しますか？`)) {
                                                     deleteMaterial(material.id);
@@ -118,4 +144,8 @@ export const MaterialList = () => {
 
 const TrashIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
+);
+
+const PencilIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
 );
