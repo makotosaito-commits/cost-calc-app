@@ -7,6 +7,7 @@ import { SettingsPage } from './components/SettingsPage';
 import { AuthPage } from './components/AuthPage';
 import { Layout } from './components/Layout';
 import { LegalPage } from './components/LegalPage';
+import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { db } from './lib/db';
 import { supabase } from './lib/supabase';
 import { Material } from './types';
@@ -35,6 +36,7 @@ const resolvePostAuthView = (fromView: string | null): AppView => {
 function App() {
     const pathname = window.location.pathname;
     const legalType = pathname === '/terms' ? 'terms' : pathname === '/privacy' ? 'privacy' : null;
+    const isResetPasswordPage = pathname === '/reset-password';
 
     const [view, setView] = useState<AppView>('menus');
     const [session, setSession] = useState<Session | null>(null);
@@ -116,6 +118,10 @@ function App() {
 
     if (legalType) {
         return <LegalPage type={legalType} />;
+    }
+
+    if (isResetPasswordPage) {
+        return <ResetPasswordPage />;
     }
 
     if (authLoading) {
