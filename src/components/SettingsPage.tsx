@@ -175,10 +175,26 @@ export const SettingsPage = () => {
                 <CardHeader className="border-b border-border pb-4">
                     <CardTitle className="text-lg">アカウント</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
-                    <Button variant="outline" onClick={handleLogout}>
+                <CardContent className="pt-6 space-y-3">
+                    <Button variant="outline" onClick={handleLogout} className="w-full sm:w-auto">
                         ログアウト
                     </Button>
+                    <div>
+                        <a
+                            href="https://forms.gle/xqf6JpxL6JGnZ1xx5"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center rounded-xl text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 h-11 px-5 py-2 border border-input bg-background hover:bg-accent/70 hover:text-accent-foreground w-full sm:w-auto"
+                        >
+                            解約はこちら
+                        </a>
+                    </div>
+                    <a href="/terms" className="block text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
+                        利用規約
+                    </a>
+                    <a href="/privacy" className="block text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
+                        プライバシーポリシー
+                    </a>
                 </CardContent>
             </Card>
 

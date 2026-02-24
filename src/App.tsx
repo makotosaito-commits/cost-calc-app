@@ -6,6 +6,7 @@ import { MenuPage } from './components/MenuPage';
 import { SettingsPage } from './components/SettingsPage';
 import { AuthPage } from './components/AuthPage';
 import { Layout } from './components/Layout';
+import { LegalPage } from './components/LegalPage';
 import { db } from './lib/db';
 import { supabase } from './lib/supabase';
 import { Material } from './types';
@@ -32,6 +33,9 @@ const resolvePostAuthView = (fromView: string | null): AppView => {
 };
 
 function App() {
+    const pathname = window.location.pathname;
+    const legalType = pathname === '/terms' ? 'terms' : pathname === '/privacy' ? 'privacy' : null;
+
     const [view, setView] = useState<AppView>('menus');
     const [session, setSession] = useState<Session | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
@@ -109,6 +113,10 @@ function App() {
                 return <MenuPage />;
         }
     };
+
+    if (legalType) {
+        return <LegalPage type={legalType} />;
+    }
 
     if (authLoading) {
         return <div className="min-h-dvh w-full flex items-center justify-center text-muted-foreground">認証状態を確認中...</div>;

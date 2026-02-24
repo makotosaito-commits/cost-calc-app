@@ -98,6 +98,14 @@ export const AuthPage = ({ initialMessage }: AuthPageProps) => {
                     >
                         {mode === 'login' ? 'アカウントを作成する' : 'ログインに戻る'}
                     </button>
+
+                    <p className="mt-4 text-xs text-muted-foreground leading-relaxed">
+                        登録することで
+                        <a href="/terms" className="underline underline-offset-4 hover:text-foreground">利用規約</a>
+                        ・
+                        <a href="/privacy" className="underline underline-offset-4 hover:text-foreground">プライバシーポリシー</a>
+                        に同意したことになります
+                    </p>
                 </CardContent>
             </Card>
         </div>
