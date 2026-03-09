@@ -9,6 +9,7 @@ import { AuthPage } from './components/AuthPage';
 import { Layout } from './components/Layout';
 import { LegalPage } from './components/LegalPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
+import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { db } from './lib/db';
 import { supabase } from './lib/supabase';
 import { useMaterials } from './hooks/useMaterials';
@@ -111,7 +112,13 @@ function App() {
             {!session ? (
                 <Route path="*" element={<AuthPage initialMessage={authError ?? undefined} />} />
             ) : (
-                <Route element={<Layout />}>
+                <Route
+                    element={(
+                        <UnsavedChangesProvider>
+                            <Layout />
+                        </UnsavedChangesProvider>
+                    )}
+                >
                     <Route path="/" element={<Navigate to="/menu" replace />} />
                     <Route path="/menu" element={<MenuPage />} />
                     <Route

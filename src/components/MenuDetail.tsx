@@ -11,23 +11,78 @@ interface MenuDetailProps {
     menu: Menu;
     onUpdate: (id: string, changes: Partial<Menu>) => Promise<void>;
     calculatedTotalCost: number;
+    onDirtyChange?: (isDirty: boolean) => void;
+    onManualUpdateSuccess?: () => void;
 }
 
-export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailProps) => {
+type MenuSnapshot = {
+    name: string;
+    sales_price: number;
+    image?: string;
+};
+
+const createSnapshotFromMenu = (menu: Menu): MenuSnapshot => ({
+    name: menu.name,
+    sales_price: toSafeNumber(menu.sales_price),
+    image: menu.image,
+});
+
+const applyMenuUpdatesToSnapshot = (
+    snapshot: MenuSnapshot,
+    updates: Partial<Menu>,
+): MenuSnapshot => ({
+    name: updates.name !== undefined ? updates.name : snapshot.name,
+    sales_price: updates.sales_price !== undefined ? toSafeNumber(updates.sales_price) : snapshot.sales_price,
+    image: updates.image !== undefined ? updates.image : snapshot.image,
+});
+
+export const MenuDetail = ({
+    menu,
+    onUpdate,
+    calculatedTotalCost,
+    onDirtyChange,
+    onManualUpdateSuccess,
+}: MenuDetailProps) => {
     const { settings } = useCostRateSettings();
     const [name, setName] = useState(menu.name);
     const [salesPrice, setSalesPrice] = useState<number | null>(toSafeNumber(menu.sales_price) > 0 ? toSafeNumber(menu.sales_price) : null);
     const [image, setImage] = useState<string | undefined>(menu.image);
+    const [savedSnapshot, setSavedSnapshot] = useState<MenuSnapshot>(() => createSnapshotFromMenu(menu));
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setName(menu.name);
         setSalesPrice(toSafeNumber(menu.sales_price) > 0 ? toSafeNumber(menu.sales_price) : null);
         setImage(menu.image);
+        setSavedSnapshot(createSnapshotFromMenu(menu));
     }, [menu]);
 
-    const handleSave = async (updates: Partial<Menu> = {}) => {
+    const currentSnapshot: MenuSnapshot = {
+        name,
+        sales_price: salesPrice ?? 0,
+        image,
+    };
+    const isDirty = (
+        currentSnapshot.name !== savedSnapshot.name
+        || currentSnapshot.sales_price !== savedSnapshot.sales_price
+        || currentSnapshot.image !== savedSnapshot.image
+    );
+
+    useEffect(() => {
+        onDirtyChange?.(isDirty);
+    }, [isDirty, onDirtyChange]);
+
+    useEffect(() => () => {
+        onDirtyChange?.(false);
+    }, [onDirtyChange]);
+
+    const handleSave = async (updates: Partial<Menu> = {}, notifySuccess = true) => {
+        if (Object.keys(updates).length === 0) return;
         await onUpdate(menu.id, updates);
+        setSavedSnapshot((prev) => applyMenuUpdatesToSnapshot(prev, updates));
+        if (notifySuccess) {
+            onManualUpdateSuccess?.();
+        }
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,7 +92,7 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
             reader.onloadend = () => {
                 const base64 = reader.result as string;
                 setImage(base64);
-                handleSave({ image: base64 });
+                void handleSave({ image: base64 }, true);
             };
             reader.readAsDataURL(file);
         }
@@ -97,11 +152,11 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                                 <Input
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    onBlur={() => {
+                                    onBlur={async () => {
                                         const trimmedName = name.trim();
-                                        if (trimmedName) {
-                                            setName(trimmedName);
-                                            handleSave({ name: trimmedName });
+                                        setName(trimmedName);
+                                        if (trimmedName !== savedSnapshot.name) {
+                                            await handleSave({ name: trimmedName }, true);
                                         }
                                     }}
                                     placeholder="例: 牛すじ煮込み"
@@ -121,9 +176,11 @@ export const MenuDetail = ({ menu, onUpdate, calculatedTotalCost }: MenuDetailPr
                                             const raw = e.target.value.replace(/[^\d]/g, '');
                                             setSalesPrice(raw === '' ? null : toSafeNumber(raw));
                                         }}
-                                        onBlur={() => {
+                                        onBlur={async () => {
                                             const parsedSalesPrice = salesPrice ?? 0;
-                                            handleSave({ sales_price: parsedSalesPrice });
+                                            if (parsedSalesPrice !== savedSnapshot.sales_price) {
+                                                await handleSave({ sales_price: parsedSalesPrice }, true);
+                                            }
                                         }}
                                         placeholder="例: 850"
                                         className="text-xl font-semibold bg-transparent border-t-0 border-l-0 border-r-0 border-b border-border rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all pl-5 pr-1"

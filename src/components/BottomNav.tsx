@@ -1,6 +1,9 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useUnsavedChanges } from '../contexts/UnsavedChangesContext';
 
 export const BottomNav = () => {
+    const { pathname } = useLocation();
+    const { hasUnsavedMenuChanges, setHasUnsavedMenuChanges } = useUnsavedChanges();
     const tabs = [
         { id: 'menu', to: '/menu', label: 'メニュー', icon: <UtensilsIcon /> },
         { id: 'materials', to: '/materials', label: '材料', icon: <PackageIcon /> },
@@ -17,6 +20,14 @@ export const BottomNav = () => {
                         key={tab.id}
                         to={tab.to}
                         end
+                        onClick={(event) => {
+                            if (!hasUnsavedMenuChanges || pathname === tab.to) return;
+                            if (window.confirm('編集中の内容があります。保存せず移動しますか？')) {
+                                setHasUnsavedMenuChanges(false);
+                                return;
+                            }
+                            event.preventDefault();
+                        }}
                         className={({ isActive }) => `flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-200 ${
                             isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`}
