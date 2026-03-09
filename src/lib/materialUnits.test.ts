@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    getSafePurchaseQuantityForCalc,
     normalizeInternalUnit,
     normalizePurchaseQuantity,
     resolveDisplayValues,
@@ -26,6 +27,7 @@ describe('materialUnits', () => {
             expect(sanitizeBaseUnit('個')).toBe('個');
             expect(sanitizeBaseUnit('kg')).toBe('g');
             expect(sanitizeBaseUnit('unknown')).toBe('g');
+            expect(sanitizeBaseUnit(null, 'ml')).toBe('ml');
         });
     });
 
@@ -65,6 +67,26 @@ describe('materialUnits', () => {
             });
             expect(resolved.displayQuantity).toBe(400);
             expect(resolved.displayUnit).toBe('g');
+        });
+
+        it('falls back to legacy unit and safe quantity when values are invalid', () => {
+            const resolved = resolveDisplayValues({
+                purchase_quantity: 0,
+                base_unit: null as unknown as 'g',
+                purchase_display_quantity: null,
+                purchase_display_unit: null,
+                unit: 'kg',
+            });
+            expect(resolved.displayQuantity).toBe(1);
+            expect(resolved.displayUnit).toBe('kg');
+        });
+    });
+
+    describe('getSafePurchaseQuantityForCalc', () => {
+        it('uses 1 for invalid quantity', () => {
+            expect(getSafePurchaseQuantityForCalc(0)).toBe(1);
+            expect(getSafePurchaseQuantityForCalc(undefined)).toBe(1);
+            expect(getSafePurchaseQuantityForCalc('abc')).toBe(1);
         });
     });
 });

@@ -9,9 +9,13 @@ export const sanitizeDisplayUnit = (raw: unknown): InputUnit | null => {
     return INPUT_UNITS.includes(normalized as InputUnit) ? normalized as InputUnit : null;
 };
 
-export const sanitizeBaseUnit = (raw: unknown): BaseUnit => {
-    if (raw === 'g' || raw === 'ml' || raw === '個') return raw;
-    if (raw === 'kg') return 'g';
+export const sanitizeBaseUnit = (raw: unknown, legacyUnit?: unknown): BaseUnit => {
+    const primary = typeof raw === 'string' ? raw.trim() : '';
+    const fallback = typeof legacyUnit === 'string' ? legacyUnit.trim() : '';
+    const candidate = primary || fallback;
+
+    if (candidate === 'g' || candidate === 'ml' || candidate === '個') return candidate;
+    if (candidate === 'kg') return 'g';
     return 'g';
 };
 
@@ -26,14 +30,29 @@ export const normalizePurchaseQuantity = (quantity: unknown, displayUnit: InputU
     return numericQuantity;
 };
 
+export const getSafePurchaseQuantityForCalc = (quantity: unknown): number => {
+    const numericQuantity = toSafeNumber(quantity);
+    return numericQuantity > 0 ? numericQuantity : 1;
+};
+
 export const resolveDisplayValues = (
-    material: Pick<Material, 'purchase_quantity' | 'base_unit' | 'purchase_display_quantity' | 'purchase_display_unit'>
+    material: Pick<Material, 'purchase_quantity' | 'base_unit' | 'purchase_display_quantity' | 'purchase_display_unit'> & {
+        unit?: unknown;
+    }
 ) => {
-    const displayUnit = sanitizeDisplayUnit(material.purchase_display_unit) ?? sanitizeBaseUnit(material.base_unit);
-    const displayQuantity =
+    const rawDisplayUnit = sanitizeDisplayUnit(material.purchase_display_unit);
+    const displayFromBase = sanitizeDisplayUnit(material.base_unit);
+    const displayFromLegacy = sanitizeDisplayUnit(material.unit);
+    const safeBaseUnit = sanitizeBaseUnit(material.base_unit, material.unit);
+    const displayUnit = rawDisplayUnit ?? displayFromBase ?? displayFromLegacy ?? safeBaseUnit;
+    const displayQuantityRaw =
         material.purchase_display_quantity === null || material.purchase_display_quantity === undefined
             ? toSafeNumber(material.purchase_quantity)
             : toSafeNumber(material.purchase_display_quantity);
+    const fallbackQuantity = toSafeNumber(material.purchase_quantity);
+    const displayQuantity = displayQuantityRaw > 0
+        ? displayQuantityRaw
+        : (fallbackQuantity > 0 ? fallbackQuantity : 1);
 
     return {
         displayQuantity,

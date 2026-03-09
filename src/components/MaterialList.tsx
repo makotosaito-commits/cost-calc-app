@@ -6,7 +6,7 @@ import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 import { calculateUnitPriceWithYield, normalizeAmount, toSafeNumber } from '../lib/calculator';
 import { Material } from '../types';
-import { resolveDisplayValues } from '../lib/materialUnits';
+import { getSafePurchaseQuantityForCalc, resolveDisplayValues, sanitizeBaseUnit } from '../lib/materialUnits';
 
 type MaterialListProps = {
     onEdit: (material: Material) => void;
@@ -20,8 +20,10 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY);
 
-    const getUnitPrice = (price: number, quantity: number, unit: string, yieldRate?: number | null, fallback?: number) => {
-        const normalizedQty = normalizeAmount(toSafeNumber(quantity), unit);
+    const getUnitPrice = (price: number, quantity: unknown, unit: unknown, yieldRate?: number | null, fallback?: number) => {
+        const safeQuantity = getSafePurchaseQuantityForCalc(quantity);
+        const safeUnit = sanitizeBaseUnit(unit);
+        const normalizedQty = normalizeAmount(safeQuantity, safeUnit);
         if (normalizedQty > 0) return calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, yieldRate);
         return toSafeNumber(fallback);
     };
@@ -131,16 +133,17 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
                     <div className="md:hidden divide-y divide-border">
                         {filteredMaterials.map((material) => {
                             const purchaseDisplay = resolveDisplayValues(material);
+                            const internalUnit = sanitizeBaseUnit(material.base_unit, (material as Material & { unit?: unknown }).unit);
                             return (
                                 <div key={material.id} className="py-3 px-1 rounded-lg bg-card border border-border">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0 pr-2">
                                             <p className="font-bold text-foreground leading-tight break-words">{material.name}</p>
                                             <p className="mt-1 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                                                {toSafeNumber(material.purchase_price).toLocaleString()}円 / {purchaseDisplay.quantity.toLocaleString()}{purchaseDisplay.unit}
+                                                {toSafeNumber(material.purchase_price).toLocaleString()}円 / {toSafeNumber(purchaseDisplay.displayQuantity).toLocaleString()}{purchaseDisplay.displayUnit}
                                             </p>
                                             <p className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                                                単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円/{material.base_unit}
+                                                単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, internalUnit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円/{internalUnit}
                                             </p>
                                         </div>
                                         <Button
@@ -187,6 +190,7 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
                                 <TableBody>
                                     {filteredMaterials.map((material) => {
                                         const purchaseDisplay = resolveDisplayValues(material);
+                                        const internalUnit = sanitizeBaseUnit(material.base_unit, (material as Material & { unit?: unknown }).unit);
                                         return (
                                             <TableRow key={material.id} className="border-border hover:bg-muted/50">
                                                 <TableCell className="font-bold text-foreground py-4">{material.name}</TableCell>
@@ -196,15 +200,15 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="text-right font-mono text-xs">
-                                                    {toSafeNumber(material.purchase_price)}円 / {purchaseDisplay.quantity.toLocaleString()}{purchaseDisplay.unit}
+                                                    {toSafeNumber(material.purchase_price)}円 / {toSafeNumber(purchaseDisplay.displayQuantity).toLocaleString()}{purchaseDisplay.displayUnit}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex flex-col items-end leading-tight">
                                                         <span className="text-lg font-black text-foreground tabular-nums">
-                                                            {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円
+                                                            {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, internalUnit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円
                                                         </span>
                                                         <span className="text-[10px] text-muted-foreground font-bold tracking-wide">
-                                                            /{material.base_unit}
+                                                            /{internalUnit}
                                                         </span>
                                                     </div>
                                                 </TableCell>

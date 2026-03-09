@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { db } from '../lib/db';
 import { supabase } from '../lib/supabase';
 import { Material } from '../types';
+import { normalizeYieldRate, toSafeNumber } from '../lib/calculator';
 import { sanitizeBaseUnit, sanitizeDisplayUnit } from '../lib/materialUnits';
 
 type MaterialDeleteDb = {
@@ -46,6 +47,11 @@ export const useMaterials = () => {
             .order('name', { ascending: true });
     };
 
+    const sanitizePurchaseQuantity = (value: unknown) => {
+        const numeric = toSafeNumber(value);
+        return numeric > 0 ? numeric : 1;
+    };
+
     const fetchMaterials = useCallback(async () => {
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData.user?.id;
@@ -54,16 +60,22 @@ export const useMaterials = () => {
             return;
         }
 
-        const selectWithDisplayAndYield = 'id,name,category,purchase_price,purchase_quantity,base_unit,purchase_display_quantity,purchase_display_unit,yield_rate,calculated_unit_price';
-        const selectWithYieldRate = 'id,name,category,purchase_price,purchase_quantity,base_unit,yield_rate,calculated_unit_price';
-        const selectLegacy = 'id,name,category,purchase_price,purchase_quantity,base_unit,calculated_unit_price';
+        const selectAttempts = [
+            'id,name,category,purchase_price,purchase_quantity,base_unit,unit,purchase_display_quantity,purchase_display_unit,yield_rate,calculated_unit_price',
+            'id,name,category,purchase_price,purchase_quantity,base_unit,purchase_display_quantity,purchase_display_unit,yield_rate,calculated_unit_price',
+            'id,name,category,purchase_price,purchase_quantity,base_unit,unit,yield_rate,calculated_unit_price',
+            'id,name,category,purchase_price,purchase_quantity,base_unit,yield_rate,calculated_unit_price',
+            'id,name,category,purchase_price,purchase_quantity,base_unit,unit,calculated_unit_price',
+            'id,name,category,purchase_price,purchase_quantity,base_unit,calculated_unit_price',
+        ];
 
-        let result = await queryMaterials(selectWithDisplayAndYield, userId);
-        if (result.error && hasMissingColumn(result.error.message, ['purchase_display_quantity', 'purchase_display_unit'])) {
-            result = await queryMaterials(selectWithYieldRate, userId);
-        }
-        if (result.error && hasMissingColumn(result.error.message, ['yield_rate'])) {
-            result = await queryMaterials(selectLegacy, userId);
+        let result = await queryMaterials(selectAttempts[0], userId);
+        for (let i = 1; i < selectAttempts.length; i += 1) {
+            if (!result.error) break;
+            if (!hasMissingColumn(result.error.message, ['purchase_display_quantity', 'purchase_display_unit', 'yield_rate', 'unit'])) {
+                break;
+            }
+            result = await queryMaterials(selectAttempts[i], userId);
         }
 
         const { data, error } = result;
@@ -78,15 +90,16 @@ export const useMaterials = () => {
             name: String(row.name ?? ''),
             category: String(row.category ?? ''),
             purchase_price: Number(row.purchase_price ?? 0),
-            purchase_quantity: Number(row.purchase_quantity ?? 0),
-            base_unit: sanitizeBaseUnit(row.base_unit),
+            purchase_quantity: sanitizePurchaseQuantity(row.purchase_quantity),
+            base_unit: sanitizeBaseUnit(row.base_unit, row.unit),
             purchase_display_quantity: row.purchase_display_quantity === null || row.purchase_display_quantity === undefined
                 ? null
-                : Number(row.purchase_display_quantity),
+                : (() => {
+                    const numeric = toSafeNumber(row.purchase_display_quantity);
+                    return numeric > 0 ? numeric : null;
+                })(),
             purchase_display_unit: sanitizeDisplayUnit(row.purchase_display_unit),
-            yield_rate: row.yield_rate === null || row.yield_rate === undefined
-                ? null
-                : Number(row.yield_rate),
+            yield_rate: normalizeYieldRate(row.yield_rate ?? 100),
             calculated_unit_price: Number(row.calculated_unit_price ?? 0),
         }));
 
@@ -109,11 +122,14 @@ export const useMaterials = () => {
             name: material.name,
             category: material.category,
             purchase_price: material.purchase_price,
-            purchase_quantity: material.purchase_quantity,
-            base_unit: material.base_unit,
-            purchase_display_quantity: material.purchase_display_quantity ?? null,
-            purchase_display_unit: material.purchase_display_unit ?? null,
-            yield_rate: material.yield_rate ?? null,
+            purchase_quantity: sanitizePurchaseQuantity(material.purchase_quantity),
+            base_unit: sanitizeBaseUnit(material.base_unit),
+            purchase_display_quantity: (() => {
+                const numeric = toSafeNumber(material.purchase_display_quantity);
+                return numeric > 0 ? numeric : null;
+            })(),
+            purchase_display_unit: sanitizeDisplayUnit(material.purchase_display_unit),
+            yield_rate: normalizeYieldRate(material.yield_rate ?? 100),
             calculated_unit_price: material.calculated_unit_price ?? 0,
         };
         const { purchase_display_quantity: _omitDisplayQuantity, purchase_display_unit: _omitDisplayUnit, ...payloadWithoutDisplay } = payload;
@@ -150,6 +166,23 @@ export const useMaterials = () => {
         }
 
         const updatePayload: Partial<Material> = { ...changes };
+        if (Object.prototype.hasOwnProperty.call(updatePayload, 'purchase_quantity')) {
+            updatePayload.purchase_quantity = sanitizePurchaseQuantity(updatePayload.purchase_quantity);
+        }
+        if (Object.prototype.hasOwnProperty.call(updatePayload, 'purchase_display_quantity')) {
+            const numeric = toSafeNumber(updatePayload.purchase_display_quantity);
+            updatePayload.purchase_display_quantity = numeric > 0 ? numeric : null;
+        }
+        if (Object.prototype.hasOwnProperty.call(updatePayload, 'purchase_display_unit')) {
+            updatePayload.purchase_display_unit = sanitizeDisplayUnit(updatePayload.purchase_display_unit);
+        }
+        if (Object.prototype.hasOwnProperty.call(updatePayload, 'base_unit')) {
+            updatePayload.base_unit = sanitizeBaseUnit(updatePayload.base_unit);
+        }
+        if (Object.prototype.hasOwnProperty.call(updatePayload, 'yield_rate')) {
+            updatePayload.yield_rate = normalizeYieldRate(updatePayload.yield_rate ?? 100);
+        }
+
         const { purchase_display_quantity: _omitDisplayQuantity, purchase_display_unit: _omitDisplayUnit, ...changesWithoutDisplay } = updatePayload;
         const { yield_rate: _omitYieldRate, ...changesWithoutYield } = updatePayload;
         const { yield_rate: _omitYieldRate2, ...changesWithoutDisplayAndYield } = changesWithoutDisplay;
