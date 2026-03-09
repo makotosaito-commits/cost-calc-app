@@ -95,7 +95,9 @@ create trigger on_auth_user_created
 -- ------------------------------------------------------------
 
 alter table if exists materials
-  add column if not exists yield_rate numeric;
+  add column if not exists yield_rate numeric,
+  add column if not exists purchase_display_quantity numeric,
+  add column if not exists purchase_display_unit text;
 
 alter table if exists menus
   add column if not exists sales_price numeric default 0,

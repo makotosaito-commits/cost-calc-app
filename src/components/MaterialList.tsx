@@ -25,6 +25,18 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
         return toSafeNumber(fallback);
     };
 
+    const getPurchaseDisplay = (material: Material) => {
+        const quantity =
+            material.purchase_display_quantity === null || material.purchase_display_quantity === undefined
+                ? toSafeNumber(material.purchase_quantity)
+                : toSafeNumber(material.purchase_display_quantity);
+        const unit =
+            material.purchase_display_unit === null || material.purchase_display_unit === undefined
+                ? material.base_unit
+                : material.purchase_display_unit;
+        return { quantity, unit };
+    };
+
     const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
     const categoryOptions = useMemo(() => {
@@ -128,43 +140,46 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
             ) : (
                 <>
                     <div className="md:hidden divide-y divide-border">
-                        {filteredMaterials.map((material) => (
-                            <div key={material.id} className="py-3 px-1 rounded-lg bg-card border border-border">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0 pr-2">
-                                        <p className="font-bold text-foreground leading-tight break-words">{material.name}</p>
-                                        <p className="mt-1 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                                            {toSafeNumber(material.purchase_price).toLocaleString()}円 / {toSafeNumber(material.purchase_quantity).toLocaleString()}{material.base_unit}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                                            単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円/{material.base_unit}
-                                        </p>
+                        {filteredMaterials.map((material) => {
+                            const purchaseDisplay = getPurchaseDisplay(material);
+                            return (
+                                <div key={material.id} className="py-3 px-1 rounded-lg bg-card border border-border">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0 pr-2">
+                                            <p className="font-bold text-foreground leading-tight break-words">{material.name}</p>
+                                            <p className="mt-1 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                                                {toSafeNumber(material.purchase_price).toLocaleString()}円 / {purchaseDisplay.quantity.toLocaleString()}{purchaseDisplay.unit}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                                                単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円/{material.base_unit}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => onEdit(material)}
+                                            className="h-6 w-6 shrink-0 self-center text-muted-foreground hover:text-foreground"
+                                            aria-label={`${material.name} を編集`}
+                                        >
+                                            <PencilIcon className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => {
+                                                if (confirm(`${material.name} を削除しますか？`)) {
+                                                    deleteMaterial(material.id);
+                                                }
+                                            }}
+                                            className="h-6 w-6 shrink-0 self-center text-muted-foreground hover:text-foreground"
+                                            aria-label={`${material.name} を削除`}
+                                        >
+                                            <TrashIcon className="h-4 w-4" />
+                                        </Button>
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => onEdit(material)}
-                                        className="h-6 w-6 shrink-0 self-center text-muted-foreground hover:text-foreground"
-                                        aria-label={`${material.name} を編集`}
-                                    >
-                                        <PencilIcon className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => {
-                                            if (confirm(`${material.name} を削除しますか？`)) {
-                                                deleteMaterial(material.id);
-                                            }
-                                        }}
-                                        className="h-6 w-6 shrink-0 self-center text-muted-foreground hover:text-foreground"
-                                        aria-label={`${material.name} を削除`}
-                                    >
-                                        <TrashIcon className="h-4 w-4" />
-                                    </Button>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <Card className="hidden md:block bg-card/50 border-border p-0 xl:flex-1 xl:min-h-0">
@@ -181,54 +196,57 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredMaterials.map((material) => (
-                                        <TableRow key={material.id} className="border-border hover:bg-muted/50">
-                                            <TableCell className="font-bold text-foreground py-4">{material.name}</TableCell>
-                                            <TableCell>
-                                                <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium">
-                                                    {material.category || '未分類'}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono text-xs">
-                                                {toSafeNumber(material.purchase_price)}円 / {toSafeNumber(material.purchase_quantity)}{material.base_unit}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex flex-col items-end leading-tight">
-                                                    <span className="text-lg font-black text-foreground tabular-nums">
-                                                        {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円
+                                    {filteredMaterials.map((material) => {
+                                        const purchaseDisplay = getPurchaseDisplay(material);
+                                        return (
+                                            <TableRow key={material.id} className="border-border hover:bg-muted/50">
+                                                <TableCell className="font-bold text-foreground py-4">{material.name}</TableCell>
+                                                <TableCell>
+                                                    <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium">
+                                                        {material.category || '未分類'}
                                                     </span>
-                                                    <span className="text-[10px] text-muted-foreground font-bold tracking-wide">
-                                                        /{material.base_unit}
-                                                    </span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => onEdit(material)}
-                                                    className="text-muted-foreground hover:text-foreground"
-                                                    aria-label={`${material.name} を編集`}
-                                                >
-                                                    <PencilIcon className="h-4 w-4" />
-                                                </Button>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => {
-                                                        if (confirm(`${material.name} を削除しますか？`)) {
-                                                            deleteMaterial(material.id);
-                                                        }
-                                                    }}
-                                                    className="text-muted-foreground hover:text-destructive"
-                                                >
-                                                    <TrashIcon className="h-4 w-4" />
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono text-xs">
+                                                    {toSafeNumber(material.purchase_price)}円 / {purchaseDisplay.quantity.toLocaleString()}{purchaseDisplay.unit}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex flex-col items-end leading-tight">
+                                                        <span className="text-lg font-black text-foreground tabular-nums">
+                                                            {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground font-bold tracking-wide">
+                                                            /{material.base_unit}
+                                                        </span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => onEdit(material)}
+                                                        className="text-muted-foreground hover:text-foreground"
+                                                        aria-label={`${material.name} を編集`}
+                                                    >
+                                                        <PencilIcon className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => {
+                                                            if (confirm(`${material.name} を削除しますか？`)) {
+                                                                deleteMaterial(material.id);
+                                                            }
+                                                        }}
+                                                        className="text-muted-foreground hover:text-destructive"
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                         </div>

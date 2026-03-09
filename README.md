@@ -64,7 +64,7 @@ npm test -- --run
 ## データモデル（現行）
 
 - `Material`:
-  - `name`, `purchase_price`, `purchase_quantity`, `base_unit`, `yield_rate`, `calculated_unit_price`
+  - `name`, `purchase_price`, `purchase_quantity`, `base_unit`, `purchase_display_quantity`, `purchase_display_unit`, `yield_rate`, `calculated_unit_price`
 - `Menu`:
   - `name`, `sales_price`, `total_cost`, `gross_profit`, `cost_rate`, `image`
 - `Recipe`:

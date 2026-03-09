@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMaterials } from '../hooks/useMaterials';
 import { calculateUnitPriceWithYield, normalizeAmount, toSafeNumber } from '../lib/calculator';
-import { BaseUnit, Material } from '../types';
+import { BaseUnit, InputUnit, Material } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
@@ -19,7 +19,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
     const [price, setPrice] = useState<number | ''>('');
     const [quantity, setQuantity] = useState<number | ''>('');
     const [yieldRate, setYieldRate] = useState<number | ''>('');
-    const [inputUnit, setInputUnit] = useState('g');
+    const [inputUnit, setInputUnit] = useState<InputUnit>('g');
     const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
 
     const resetForm = () => {
@@ -39,13 +39,21 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
         setName(editingMaterial.name);
         setCategory(editingMaterial.category);
         setPrice(toSafeNumber(editingMaterial.purchase_price));
-        setQuantity(toSafeNumber(editingMaterial.purchase_quantity));
+        setQuantity(
+            editingMaterial.purchase_display_quantity === null || editingMaterial.purchase_display_quantity === undefined
+                ? toSafeNumber(editingMaterial.purchase_quantity)
+                : toSafeNumber(editingMaterial.purchase_display_quantity)
+        );
         setYieldRate(
             editingMaterial.yield_rate === null || editingMaterial.yield_rate === undefined
                 ? ''
                 : toSafeNumber(editingMaterial.yield_rate)
         );
-        setInputUnit(editingMaterial.base_unit);
+        setInputUnit(
+            editingMaterial.purchase_display_unit === null || editingMaterial.purchase_display_unit === undefined
+                ? editingMaterial.base_unit
+                : editingMaterial.purchase_display_unit
+        );
     }, [editingMaterial]);
 
     useEffect(() => {
@@ -64,6 +72,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
         if (!name || !price || !quantity) return;
 
         let baseUnit: BaseUnit = 'g';
+        if (inputUnit === 'kg') baseUnit = 'g';
         if (inputUnit === 'ml') baseUnit = 'ml';
         if (inputUnit === '個') baseUnit = '個';
 
@@ -74,6 +83,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
 
         const normalizedYieldRate = yieldRate === '' ? null : toSafeNumber(yieldRate);
         const normalizedQty = normalizeAmount(toSafeNumber(quantity), inputUnit);
+        const displayQuantity = quantity === '' ? null : toSafeNumber(quantity);
         const unitPrice = calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, normalizedYieldRate);
 
         if (editingMaterial) {
@@ -83,6 +93,8 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                 purchase_price: toSafeNumber(price),
                 purchase_quantity: normalizedQty,
                 base_unit: baseUnit,
+                purchase_display_quantity: displayQuantity,
+                purchase_display_unit: inputUnit,
                 yield_rate: normalizedYieldRate,
                 calculated_unit_price: unitPrice,
             });
@@ -97,6 +109,8 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
             purchase_price: toSafeNumber(price),
             purchase_quantity: normalizedQty,
             base_unit: baseUnit,
+            purchase_display_quantity: displayQuantity,
+            purchase_display_unit: inputUnit,
             yield_rate: normalizedYieldRate,
             calculated_unit_price: unitPrice,
         });
@@ -165,6 +179,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                                 }}
                                 placeholder="1"
                                 required
+                                step="any"
                                 min="0"
                                 className="bg-background border-border"
                             />
@@ -194,9 +209,9 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                     <div className="space-y-1.5">
                         <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">単位</label>
                         <SegmentedControl
-                            options={['g', 'ml', '個']}
+                            options={['g', 'kg', 'ml', '個']}
                             value={inputUnit}
-                            onChange={setInputUnit}
+                            onChange={(value) => setInputUnit(value as InputUnit)}
                             className="w-full bg-background border border-border"
                         />
                     </div>
@@ -211,7 +226,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                         )}
                         <div className={`rounded-xl border border-border p-4 transition-all duration-300 ${calculatedPrice !== null ? 'bg-background opacity-100' : 'bg-transparent opacity-30 select-none'}`}>
                             <p className="text-center text-sm font-bold text-foreground">
-                                {calculatedPrice !== null ? Math.round(calculatedPrice).toLocaleString() : '0'} <span className="text-xs font-normal text-muted-foreground">円 / {inputUnit === '個' ? '個' : inputUnit}</span>
+                                {calculatedPrice !== null ? Math.round(calculatedPrice).toLocaleString() : '0'} <span className="text-xs font-normal text-muted-foreground">円 / {inputUnit === 'kg' ? 'g' : inputUnit}</span>
                             </p>
                         </div>
                     </div>

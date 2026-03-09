@@ -1,4 +1,5 @@
 export type BaseUnit = 'g' | 'ml' | '個';
+export type InputUnit = 'g' | 'kg' | 'ml' | '個';
 
 export interface Material {
     id: string;
@@ -6,6 +7,9 @@ export interface Material {
     category: string;
     purchase_price: number;
     purchase_quantity: number;
+    // 仕入詳細表示用の数量・単位（未設定時は purchase_quantity/base_unit を使用）
+    purchase_display_quantity?: number | null;
+    purchase_display_unit?: InputUnit | null;
     base_unit: BaseUnit;
     // 材料の歩留まり (%)。未入力は null として扱い、計算時に 100% 扱いとする
     yield_rate?: number | null;

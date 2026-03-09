@@ -32,6 +32,14 @@ export const deleteMaterialWithRecipes = async (database: MaterialDeleteDb, id: 
 export const useMaterials = () => {
     const [materials, setMaterials] = useState<Material[]>([]);
 
+    const queryMaterials = async (selectColumns: string, userId: string) => {
+        return supabase
+            .from('materials')
+            .select(selectColumns)
+            .eq('user_id', userId)
+            .order('name', { ascending: true });
+    };
+
     const fetchMaterials = useCallback(async () => {
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData.user?.id;
@@ -40,21 +48,23 @@ export const useMaterials = () => {
             return;
         }
 
+        const selectWithDisplayAndYield = 'id,name,category,purchase_price,purchase_quantity,base_unit,purchase_display_quantity,purchase_display_unit,yield_rate,calculated_unit_price';
         const selectWithYieldRate = 'id,name,category,purchase_price,purchase_quantity,base_unit,yield_rate,calculated_unit_price';
-        const selectWithoutYieldRate = 'id,name,category,purchase_price,purchase_quantity,base_unit,calculated_unit_price';
+        const selectLegacy = 'id,name,category,purchase_price,purchase_quantity,base_unit,calculated_unit_price';
 
-        let { data, error } = await supabase
-            .from('materials')
-            .select(selectWithYieldRate)
-            .eq('user_id', userId)
-            .order('name', { ascending: true });
+        let { data, error } = await queryMaterials(selectWithDisplayAndYield, userId);
+
+        if (error) {
+            const message = error.message.toLowerCase();
+            if (message.includes('purchase_display_quantity') || message.includes('purchase_display_unit')) {
+                const fallback = await queryMaterials(selectWithYieldRate, userId);
+                data = fallback.data;
+                error = fallback.error;
+            }
+        }
 
         if (error && error.message.toLowerCase().includes('yield_rate')) {
-            const fallback = await supabase
-                .from('materials')
-                .select(selectWithoutYieldRate)
-                .eq('user_id', userId)
-                .order('name', { ascending: true });
+            const fallback = await queryMaterials(selectLegacy, userId);
             data = fallback.data;
             error = fallback.error;
         }
@@ -72,6 +82,12 @@ export const useMaterials = () => {
             purchase_price: Number(row.purchase_price ?? 0),
             purchase_quantity: Number(row.purchase_quantity ?? 0),
             base_unit: (row.base_unit ?? 'g') as Material['base_unit'],
+            purchase_display_quantity: row.purchase_display_quantity === null || row.purchase_display_quantity === undefined
+                ? null
+                : Number(row.purchase_display_quantity),
+            purchase_display_unit: row.purchase_display_unit === null || row.purchase_display_unit === undefined
+                ? null
+                : String(row.purchase_display_unit) as Material['purchase_display_unit'],
             yield_rate: row.yield_rate === null || row.yield_rate === undefined
                 ? null
                 : Number(row.yield_rate),
@@ -99,14 +115,36 @@ export const useMaterials = () => {
             purchase_price: material.purchase_price,
             purchase_quantity: material.purchase_quantity,
             base_unit: material.base_unit,
+            purchase_display_quantity: material.purchase_display_quantity ?? null,
+            purchase_display_unit: material.purchase_display_unit ?? null,
             yield_rate: material.yield_rate ?? null,
             calculated_unit_price: material.calculated_unit_price ?? 0,
         };
-        let { error } = await supabase.from('materials').insert(payload);
+        let insertPayload: Record<string, unknown> = { ...payload };
+        let { error } = await supabase.from('materials').insert(insertPayload);
+        if (error) {
+            const message = error.message.toLowerCase();
+            if (message.includes('purchase_display_quantity') || message.includes('purchase_display_unit')) {
+                const { purchase_display_quantity: _omitDisplayQuantity, purchase_display_unit: _omitDisplayUnit, ...withoutDisplayPayload } = insertPayload;
+                insertPayload = withoutDisplayPayload;
+                const fallback = await supabase.from('materials').insert(insertPayload);
+                error = fallback.error;
+            }
+        }
         if (error && error.message.toLowerCase().includes('yield_rate')) {
-            const { yield_rate: _omit, ...legacyPayload } = payload;
-            const fallback = await supabase.from('materials').insert(legacyPayload);
+            const { yield_rate: _omitYieldRate, ...legacyPayload } = insertPayload;
+            insertPayload = legacyPayload;
+            const fallback = await supabase.from('materials').insert(insertPayload);
             error = fallback.error;
+        }
+        if (error) {
+            const message = error.message.toLowerCase();
+            if (message.includes('purchase_display_quantity') || message.includes('purchase_display_unit')) {
+                const { purchase_display_quantity: _omitDisplayQuantity, purchase_display_unit: _omitDisplayUnit, ...withoutDisplayPayload } = insertPayload;
+                insertPayload = withoutDisplayPayload;
+                const fallback = await supabase.from('materials').insert(insertPayload);
+                error = fallback.error;
+            }
         }
         if (error) {
             throw new Error(error.message);
@@ -120,20 +158,55 @@ export const useMaterials = () => {
             throw new Error('ログイン状態を確認できません。');
         }
 
+        let updatePayload: Partial<Material> = { ...changes };
         let { error } = await supabase
             .from('materials')
-            .update(changes)
+            .update(updatePayload)
             .eq('id', id)
             .eq('user_id', userData.user.id);
 
-        if (error && error.message.toLowerCase().includes('yield_rate') && Object.prototype.hasOwnProperty.call(changes, 'yield_rate')) {
-            const { yield_rate: _omit, ...legacyChanges } = changes;
+        if (error) {
+            const message = error.message.toLowerCase();
+            if (
+                (message.includes('purchase_display_quantity') || message.includes('purchase_display_unit'))
+                && (Object.prototype.hasOwnProperty.call(updatePayload, 'purchase_display_quantity') || Object.prototype.hasOwnProperty.call(updatePayload, 'purchase_display_unit'))
+            ) {
+                const { purchase_display_quantity: _omitDisplayQuantity, purchase_display_unit: _omitDisplayUnit, ...withoutDisplayChanges } = updatePayload;
+                updatePayload = withoutDisplayChanges;
+                const fallback = await supabase
+                    .from('materials')
+                    .update(updatePayload)
+                    .eq('id', id)
+                    .eq('user_id', userData.user.id);
+                error = fallback.error;
+            }
+        }
+
+        if (error && error.message.toLowerCase().includes('yield_rate') && Object.prototype.hasOwnProperty.call(updatePayload, 'yield_rate')) {
+            const { yield_rate: _omitYieldRate, ...legacyChanges } = updatePayload;
+            updatePayload = legacyChanges;
             const fallback = await supabase
                 .from('materials')
-                .update(legacyChanges)
+                .update(updatePayload)
                 .eq('id', id)
                 .eq('user_id', userData.user.id);
             error = fallback.error;
+        }
+        if (error) {
+            const message = error.message.toLowerCase();
+            if (
+                (message.includes('purchase_display_quantity') || message.includes('purchase_display_unit'))
+                && (Object.prototype.hasOwnProperty.call(updatePayload, 'purchase_display_quantity') || Object.prototype.hasOwnProperty.call(updatePayload, 'purchase_display_unit'))
+            ) {
+                const { purchase_display_quantity: _omitDisplayQuantity, purchase_display_unit: _omitDisplayUnit, ...withoutDisplayChanges } = updatePayload;
+                updatePayload = withoutDisplayChanges;
+                const fallback = await supabase
+                    .from('materials')
+                    .update(updatePayload)
+                    .eq('id', id)
+                    .eq('user_id', userData.user.id);
+                error = fallback.error;
+            }
         }
 
         if (error) {
