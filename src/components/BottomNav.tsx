@@ -1,15 +1,10 @@
+import { NavLink } from 'react-router-dom';
 
-
-interface BottomNavProps {
-    currentView: 'menus' | 'materials' | 'settings';
-    onChange: (view: 'menus' | 'materials' | 'settings') => void;
-}
-
-export const BottomNav = ({ currentView, onChange }: BottomNavProps) => {
+export const BottomNav = () => {
     const tabs = [
-        { id: 'menus', label: 'メニュー', icon: <UtensilsIcon /> },
-        { id: 'materials', label: '材料', icon: <PackageIcon /> },
-        { id: 'settings', label: '設定', icon: <SettingsIcon /> },
+        { id: 'menu', to: '/menu', label: 'メニュー', icon: <UtensilsIcon /> },
+        { id: 'materials', to: '/materials', label: '材料', icon: <PackageIcon /> },
+        { id: 'settings', to: '/settings', label: '設定', icon: <SettingsIcon /> },
     ] as const;
 
     return (
@@ -18,21 +13,25 @@ export const BottomNav = ({ currentView, onChange }: BottomNavProps) => {
         >
             <div className="flex justify-around items-center h-16 min-h-[56px] max-w-lg mx-auto px-3">
                 {tabs.map((tab) => (
-                    <button
+                    <NavLink
                         key={tab.id}
-                        onClick={() => onChange(tab.id)}
-                        className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-200 ${currentView === tab.id
-                            ? 'text-foreground'
-                            : 'text-muted-foreground hover:text-foreground'
-                            }`}
+                        to={tab.to}
+                        end
+                        className={({ isActive }) => `flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-200 ${
+                            isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                        }`}
                     >
-                        <div className={`p-1 rounded-md transition-colors ${currentView === tab.id ? 'bg-muted' : ''}`}>
-                            {tab.icon}
-                        </div>
-                        <span className={`text-[10px] font-bold tracking-wider uppercase transition-all ${currentView === tab.id ? 'opacity-100' : 'opacity-60'}`}>
-                            {tab.label}
-                        </span>
-                    </button>
+                        {({ isActive }) => (
+                            <>
+                                <div className={`p-1 rounded-md transition-colors ${isActive ? 'bg-muted' : ''}`}>
+                                    {tab.icon}
+                                </div>
+                                <span className={`text-[10px] font-bold tracking-wider uppercase transition-all ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+                                    {tab.label}
+                                </span>
+                            </>
+                        )}
+                    </NavLink>
                 ))}
             </div>
         </div>

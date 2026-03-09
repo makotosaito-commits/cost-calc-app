@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { MaterialForm } from './components/MaterialForm';
 import { MaterialList } from './components/MaterialList';
 import { MenuPage } from './components/MenuPage';
@@ -13,33 +14,44 @@ import { supabase } from './lib/supabase';
 import { useMaterials } from './hooks/useMaterials';
 import { Material } from './types';
 
-type AppView = 'menus' | 'materials' | 'settings';
-const LAST_VIEW_KEY = 'costcalc:lastView';
-const POST_AUTH_FROM_KEY = 'costcalc:postAuthView';
+type MaterialsPageProps = {
+    editingMaterial: Material | null;
+    setEditingMaterial: (material: Material | null) => void;
+    materials: Material[];
+    addMaterial: (material: Omit<Material, 'id'>) => Promise<void>;
+    updateMaterial: (id: string, changes: Partial<Material>) => Promise<void>;
+    deleteMaterial: (id: string) => Promise<void>;
+};
 
-const isAppView = (value: string | null): value is AppView => (
-    value === 'menus' || value === 'materials' || value === 'settings'
+const MaterialsPage = ({
+    editingMaterial,
+    setEditingMaterial,
+    materials,
+    addMaterial,
+    updateMaterial,
+    deleteMaterial,
+}: MaterialsPageProps) => (
+    <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-x-hidden">
+        <h2 className="text-lg md:text-2xl font-semibold text-foreground">材料管理</h2>
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(360px,420px)_minmax(0,1fr)] gap-6 items-start">
+            <div className="xl:sticky xl:top-6">
+                <MaterialForm
+                    editingMaterial={editingMaterial}
+                    onFinishEdit={() => setEditingMaterial(null)}
+                    addMaterial={addMaterial}
+                    updateMaterial={updateMaterial}
+                />
+            </div>
+            <MaterialList
+                onEdit={setEditingMaterial}
+                materials={materials}
+                deleteMaterial={deleteMaterial}
+            />
+        </div>
+    </div>
 );
 
-const consumePostAuthView = (): string | null => {
-    const from = window.localStorage.getItem(POST_AUTH_FROM_KEY);
-    window.localStorage.removeItem(POST_AUTH_FROM_KEY);
-    return from;
-};
-
-const resolvePostAuthView = (fromView: string | null): AppView => {
-    if (isAppView(fromView)) {
-        return fromView;
-    }
-    return 'menus';
-};
-
 function App() {
-    const pathname = window.location.pathname;
-    const legalType = pathname === '/terms' ? 'terms' : pathname === '/privacy' ? 'privacy' : null;
-    const isResetPasswordPage = pathname === '/reset-password';
-
-    const [view, setView] = useState<AppView>('menus');
     const [session, setSession] = useState<Session | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [authError, setAuthError] = useState<string | null>(null);
@@ -58,7 +70,6 @@ function App() {
             }
             setSession(data.session);
             currentUserIdRef.current = data.session?.user?.id ?? null;
-            setView(data.session ? resolvePostAuthView(consumePostAuthView()) : 'menus');
             setAuthLoading(false);
         };
 
@@ -78,7 +89,6 @@ function App() {
             currentUserIdRef.current = nextUserId;
             setAuthError(null);
             setSession(nextSession);
-            setView(nextSession ? resolvePostAuthView(consumePostAuthView()) : 'menus');
             setAuthLoading(false);
         });
 
@@ -88,69 +98,47 @@ function App() {
         };
     }, []);
 
-    const renderContent = () => {
-        switch (view) {
-            case 'menus':
-                return <MenuPage />;
-            case 'materials':
-                return (
-                    <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-x-hidden">
-                        <h2 className="text-lg md:text-2xl font-semibold text-foreground">材料管理</h2>
-                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(360px,420px)_minmax(0,1fr)] gap-6 items-start">
-                            <div className="xl:sticky xl:top-6">
-                                <MaterialForm
-                                    editingMaterial={editingMaterial}
-                                    onFinishEdit={() => setEditingMaterial(null)}
-                                    addMaterial={addMaterial}
-                                    updateMaterial={updateMaterial}
-                                />
-                            </div>
-                            <MaterialList
-                                onEdit={setEditingMaterial}
-                                materials={materials}
-                                deleteMaterial={deleteMaterial}
-                            />
-                        </div>
-                    </div>
-                );
-            case 'settings':
-                return (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <SettingsPage />
-                    </div>
-                );
-            default:
-                return <MenuPage />;
-        }
-    };
-
-    if (legalType) {
-        return <LegalPage type={legalType} />;
-    }
-
-    if (isResetPasswordPage) {
-        return <ResetPasswordPage />;
-    }
-
     if (authLoading) {
         return <div className="min-h-dvh w-full flex items-center justify-center text-muted-foreground">認証状態を確認中...</div>;
     }
 
-    if (!session) {
-        return <AuthPage initialMessage={authError ?? undefined} />;
-    }
-
-    const handleChangeView = (nextView: AppView) => {
-        setView(nextView);
-        if (nextView === 'menus' || nextView === 'materials') {
-            window.localStorage.setItem(LAST_VIEW_KEY, nextView);
-        }
-    };
-
     return (
-        <Layout currentView={view} onChangeView={handleChangeView}>
-            {renderContent()}
-        </Layout>
+        <Routes>
+            <Route path="/terms" element={<LegalPage type="terms" />} />
+            <Route path="/privacy" element={<LegalPage type="privacy" />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+            {!session ? (
+                <Route path="*" element={<AuthPage initialMessage={authError ?? undefined} />} />
+            ) : (
+                <Route element={<Layout />}>
+                    <Route path="/" element={<Navigate to="/menu" replace />} />
+                    <Route path="/menu" element={<MenuPage />} />
+                    <Route
+                        path="/materials"
+                        element={(
+                            <MaterialsPage
+                                editingMaterial={editingMaterial}
+                                setEditingMaterial={setEditingMaterial}
+                                materials={materials}
+                                addMaterial={addMaterial}
+                                updateMaterial={updateMaterial}
+                                deleteMaterial={deleteMaterial}
+                            />
+                        )}
+                    />
+                    <Route
+                        path="/settings"
+                        element={(
+                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                <SettingsPage />
+                            </div>
+                        )}
+                    />
+                    <Route path="*" element={<Navigate to="/menu" replace />} />
+                </Route>
+            )}
+        </Routes>
     );
 }
 
