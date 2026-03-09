@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useMaterials } from '../hooks/useMaterials';
-import { calculateUnitPriceWithYield, toSafeNumber } from '../lib/calculator';
+import { calculateMaterialUnitPrice, toSafeNumber } from '../lib/calculator';
 import { InputUnit, Material } from '../types';
 import { normalizeInternalUnit, normalizePurchaseQuantity, resolveDisplayValues } from '../lib/materialUnits';
 import { Button } from './ui/Button';
@@ -11,10 +10,11 @@ import { SegmentedControl } from './ui/SegmentedControl';
 type MaterialFormProps = {
     editingMaterial: Material | null;
     onFinishEdit: () => void;
+    addMaterial: (material: Omit<Material, 'id'>) => Promise<void>;
+    updateMaterial: (id: string, changes: Partial<Material>) => Promise<void>;
 };
 
-export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProps) => {
-    const { addMaterial, updateMaterial } = useMaterials();
+export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updateMaterial }: MaterialFormProps) => {
     const [name, setName] = useState('');
     const [category, setCategory] = useState('');
     const [price, setPrice] = useState<number | ''>('');
@@ -54,7 +54,11 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
         if (price && displayQuantity && displayQuantity > 0) {
             const normalizedQty = normalizePurchaseQuantity(displayQuantity, displayUnit);
             const normalizedYieldRate = yieldRate === '' ? null : toSafeNumber(yieldRate);
-            const unitPrice = calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, normalizedYieldRate);
+            const unitPrice = calculateMaterialUnitPrice({
+                price: toSafeNumber(price),
+                quantity: normalizedQty,
+                yieldRate: normalizedYieldRate,
+            });
             setCalculatedPrice(unitPrice);
         } else {
             setCalculatedPrice(null);
@@ -74,7 +78,11 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
         const baseUnit = normalizeInternalUnit(displayUnit);
         const normalizedQty = normalizePurchaseQuantity(displayQuantity, displayUnit);
         const normalizedDisplayQuantity = displayQuantity === '' ? null : toSafeNumber(displayQuantity);
-        const unitPrice = calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, normalizedYieldRate);
+        const unitPrice = calculateMaterialUnitPrice({
+            price: toSafeNumber(price),
+            quantity: normalizedQty,
+            yieldRate: normalizedYieldRate,
+        });
 
         if (editingMaterial) {
             await updateMaterial(editingMaterial.id, {

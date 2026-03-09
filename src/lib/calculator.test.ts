@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     calculateUnitPrice,
     calculateUnitPriceWithYield,
+    calculateMaterialUnitPrice,
     normalizeAmount,
     normalizeYieldRate,
     calculateLineCost,
@@ -58,6 +59,42 @@ describe('Calculator Logic', () => {
         it('falls back to 100% for invalid yield values', () => {
             expect(calculateUnitPriceWithYield(1000, 1000, 0)).toBe(1);
             expect(calculateUnitPriceWithYield(1000, 1000, 120)).toBe(1);
+        });
+    });
+
+    describe('calculateMaterialUnitPrice', () => {
+        it('uses fallback when yield rate is undefined', () => {
+            expect(calculateMaterialUnitPrice({
+                price: 2000,
+                quantity: 200,
+                yieldRate: undefined,
+                fallback: 10,
+            })).toBe(10);
+        });
+
+        it('treats null yield as 100%', () => {
+            expect(calculateMaterialUnitPrice({
+                price: 2000,
+                quantity: 200,
+                yieldRate: null,
+            })).toBe(10);
+        });
+
+        it('falls back to 100% calc when yield is undefined and fallback is empty', () => {
+            expect(calculateMaterialUnitPrice({
+                price: 2000,
+                quantity: 200,
+                yieldRate: undefined,
+                fallback: 0,
+            })).toBe(10);
+        });
+
+        it('calculates with explicit yield', () => {
+            expect(calculateMaterialUnitPrice({
+                price: 2000,
+                quantity: 200,
+                yieldRate: 80,
+            })).toBe(12.5);
         });
     });
 

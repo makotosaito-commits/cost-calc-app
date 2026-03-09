@@ -10,6 +10,7 @@ import { LegalPage } from './components/LegalPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { db } from './lib/db';
 import { supabase } from './lib/supabase';
+import { useMaterials } from './hooks/useMaterials';
 import { Material } from './types';
 
 type AppView = 'menus' | 'materials' | 'settings';
@@ -44,6 +45,7 @@ function App() {
     const [authError, setAuthError] = useState<string | null>(null);
     const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
     const currentUserIdRef = useRef<string | null>(null);
+    const { materials, addMaterial, updateMaterial, deleteMaterial } = useMaterials();
 
     useEffect(() => {
         let mounted = true;
@@ -99,9 +101,15 @@ function App() {
                                 <MaterialForm
                                     editingMaterial={editingMaterial}
                                     onFinishEdit={() => setEditingMaterial(null)}
+                                    addMaterial={addMaterial}
+                                    updateMaterial={updateMaterial}
                                 />
                             </div>
-                            <MaterialList onEdit={setEditingMaterial} />
+                            <MaterialList
+                                onEdit={setEditingMaterial}
+                                materials={materials}
+                                deleteMaterial={deleteMaterial}
+                            />
                         </div>
                     </div>
                 );

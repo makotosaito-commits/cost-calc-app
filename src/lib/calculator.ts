@@ -59,6 +59,42 @@ export const calculateUnitPriceWithYield = (
     return numericPrice / effectiveQty;
 };
 
+type MaterialUnitPriceParams = {
+    price: unknown;
+    quantity: unknown;
+    yieldRate?: unknown;
+    fallback?: unknown;
+};
+
+/**
+ * 材料の基準単価を安全に計算する。
+ * - yieldRate が undefined の場合は「列未取得」とみなし fallback を優先
+ * - yieldRate が null の場合は 100% 扱い
+ */
+export const calculateMaterialUnitPrice = ({
+    price,
+    quantity,
+    yieldRate,
+    fallback,
+}: MaterialUnitPriceParams): number => {
+    let resolvedYieldRate = yieldRate;
+
+    if (yieldRate === undefined) {
+        const fallbackPrice = toSafeNumber(fallback);
+        if (fallbackPrice > 0) {
+            return fallbackPrice;
+        }
+        resolvedYieldRate = null;
+    }
+
+    const numericQuantity = toSafeNumber(quantity);
+    if (numericQuantity <= 0) {
+        return toSafeNumber(fallback);
+    }
+
+    return calculateUnitPriceWithYield(price, numericQuantity, resolvedYieldRate);
+};
+
 /**
  * 単位を変換して基準単位(g, ml, 個)での数量を返す
  * @param amount 数量

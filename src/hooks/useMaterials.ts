@@ -52,6 +52,13 @@ export const useMaterials = () => {
         return numeric > 0 ? numeric : 1;
     };
 
+    const normalizeYieldRateForSave = (value: unknown): number | null => {
+        if (value === null || value === undefined || value === '') {
+            return null;
+        }
+        return normalizeYieldRate(value);
+    };
+
     const fetchMaterials = useCallback(async () => {
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData.user?.id;
@@ -85,23 +92,30 @@ export const useMaterials = () => {
             return;
         }
 
-        const normalized: Material[] = (data ?? []).map((row) => ({
-            id: String(row.id),
-            name: String(row.name ?? ''),
-            category: String(row.category ?? ''),
-            purchase_price: Number(row.purchase_price ?? 0),
-            purchase_quantity: sanitizePurchaseQuantity(row.purchase_quantity),
-            base_unit: sanitizeBaseUnit(row.base_unit, row.unit),
-            purchase_display_quantity: row.purchase_display_quantity === null || row.purchase_display_quantity === undefined
-                ? null
-                : (() => {
-                    const numeric = toSafeNumber(row.purchase_display_quantity);
-                    return numeric > 0 ? numeric : null;
-                })(),
-            purchase_display_unit: sanitizeDisplayUnit(row.purchase_display_unit),
-            yield_rate: normalizeYieldRate(row.yield_rate ?? 100),
-            calculated_unit_price: Number(row.calculated_unit_price ?? 0),
-        }));
+        const normalized: Material[] = (data ?? []).map((row) => {
+            const hasYieldRateColumn = Object.prototype.hasOwnProperty.call(row, 'yield_rate');
+            const rawYieldRate = hasYieldRateColumn ? row.yield_rate : undefined;
+
+            return {
+                id: String(row.id),
+                name: String(row.name ?? ''),
+                category: String(row.category ?? ''),
+                purchase_price: Number(row.purchase_price ?? 0),
+                purchase_quantity: sanitizePurchaseQuantity(row.purchase_quantity),
+                base_unit: sanitizeBaseUnit(row.base_unit, row.unit),
+                purchase_display_quantity: row.purchase_display_quantity === null || row.purchase_display_quantity === undefined
+                    ? null
+                    : (() => {
+                        const numeric = toSafeNumber(row.purchase_display_quantity);
+                        return numeric > 0 ? numeric : null;
+                    })(),
+                purchase_display_unit: sanitizeDisplayUnit(row.purchase_display_unit),
+                yield_rate: rawYieldRate === undefined
+                    ? undefined
+                    : (rawYieldRate === null ? null : normalizeYieldRate(rawYieldRate)),
+                calculated_unit_price: Number(row.calculated_unit_price ?? 0),
+            };
+        });
 
         setMaterials(normalized);
     }, []);
@@ -129,7 +143,7 @@ export const useMaterials = () => {
                 return numeric > 0 ? numeric : null;
             })(),
             purchase_display_unit: sanitizeDisplayUnit(material.purchase_display_unit),
-            yield_rate: normalizeYieldRate(material.yield_rate ?? 100),
+            yield_rate: normalizeYieldRateForSave(material.yield_rate),
             calculated_unit_price: material.calculated_unit_price ?? 0,
         };
         const { purchase_display_quantity: _omitDisplayQuantity, purchase_display_unit: _omitDisplayUnit, ...payloadWithoutDisplay } = payload;
@@ -180,7 +194,7 @@ export const useMaterials = () => {
             updatePayload.base_unit = sanitizeBaseUnit(updatePayload.base_unit);
         }
         if (Object.prototype.hasOwnProperty.call(updatePayload, 'yield_rate')) {
-            updatePayload.yield_rate = normalizeYieldRate(updatePayload.yield_rate ?? 100);
+            updatePayload.yield_rate = normalizeYieldRateForSave(updatePayload.yield_rate);
         }
 
         const { purchase_display_quantity: _omitDisplayQuantity, purchase_display_unit: _omitDisplayUnit, ...changesWithoutDisplay } = updatePayload;

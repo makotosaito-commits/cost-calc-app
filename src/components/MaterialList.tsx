@@ -1,31 +1,33 @@
 import { useMemo, useState } from 'react';
-import { useMaterials } from '../hooks/useMaterials';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/Table';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
-import { calculateUnitPriceWithYield, normalizeAmount, toSafeNumber } from '../lib/calculator';
+import { calculateMaterialUnitPrice, toSafeNumber } from '../lib/calculator';
 import { Material } from '../types';
 import { getSafePurchaseQuantityForCalc, resolveDisplayValues, sanitizeBaseUnit } from '../lib/materialUnits';
 
 type MaterialListProps = {
     onEdit: (material: Material) => void;
+    materials: Material[];
+    deleteMaterial: (id: string) => Promise<void>;
 };
 
 const ALL_CATEGORY = '__all__';
 const UNCATEGORIZED_CATEGORY = '__uncategorized__';
 
-export const MaterialList = ({ onEdit }: MaterialListProps) => {
-    const { materials, deleteMaterial } = useMaterials();
+export const MaterialList = ({ onEdit, materials, deleteMaterial }: MaterialListProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY);
 
-    const getUnitPrice = (price: number, quantity: unknown, unit: unknown, yieldRate?: number | null, fallback?: number) => {
+    const getUnitPrice = (price: unknown, quantity: unknown, yieldRate?: number | null, fallback?: number) => {
         const safeQuantity = getSafePurchaseQuantityForCalc(quantity);
-        const safeUnit = sanitizeBaseUnit(unit);
-        const normalizedQty = normalizeAmount(safeQuantity, safeUnit);
-        if (normalizedQty > 0) return calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, yieldRate);
-        return toSafeNumber(fallback);
+        return calculateMaterialUnitPrice({
+            price: toSafeNumber(price),
+            quantity: safeQuantity,
+            yieldRate,
+            fallback,
+        });
     };
 
     const normalizedSearchTerm = searchTerm.trim().toLowerCase();
@@ -143,7 +145,7 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
                                                 {toSafeNumber(material.purchase_price).toLocaleString()}円 / {toSafeNumber(purchaseDisplay.displayQuantity).toLocaleString()}{purchaseDisplay.displayUnit}
                                             </p>
                                             <p className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                                                単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, internalUnit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円/{internalUnit}
+                                                単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円/{internalUnit}
                                             </p>
                                         </div>
                                         <Button
@@ -205,7 +207,7 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
                                                 <TableCell className="text-right">
                                                     <div className="flex flex-col items-end leading-tight">
                                                         <span className="text-lg font-black text-foreground tabular-nums">
-                                                            {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, internalUnit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円
+                                                            {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円
                                                         </span>
                                                         <span className="text-[10px] text-muted-foreground font-bold tracking-wide">
                                                             /{internalUnit}
