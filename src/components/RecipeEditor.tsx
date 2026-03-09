@@ -159,7 +159,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                         <div>
                                             <p className="font-bold text-foreground">{material?.name || 'Unknown'}</p>
                                             <p className="text-[10px] text-muted-foreground">
-                                                単価: {unitPrice.toFixed(3)} 円/{normalizeBaseUnit(material?.base_unit)}
+                                                単価: {Math.round(unitPrice).toLocaleString()} 円/{normalizeBaseUnit(material?.base_unit)}
                                             </p>
                                         </div>
                                         <Button
@@ -241,7 +241,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                             <TableCell className="font-bold py-4">
                                                 {material?.name || 'Unknown'}
                                                 <p className="text-[10px] text-muted-foreground font-normal">
-                                                    単価: {unitPrice.toFixed(3)} 円/{normalizeBaseUnit(material?.base_unit)}
+                                                    単価: {Math.round(unitPrice).toLocaleString()} 円/{normalizeBaseUnit(material?.base_unit)}
                                                 </p>
                                             </TableCell>
                                             <TableCell>

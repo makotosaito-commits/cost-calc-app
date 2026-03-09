@@ -211,7 +211,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                         )}
                         <div className={`rounded-xl border border-border p-4 transition-all duration-300 ${calculatedPrice !== null ? 'bg-background opacity-100' : 'bg-transparent opacity-30 select-none'}`}>
                             <p className="text-center text-sm font-bold text-foreground">
-                                {calculatedPrice !== null ? calculatedPrice.toFixed(3) : '0.000'} <span className="text-xs font-normal text-muted-foreground">円 / {inputUnit === '個' ? '個' : inputUnit}</span>
+                                {calculatedPrice !== null ? Math.round(calculatedPrice).toLocaleString() : '0'} <span className="text-xs font-normal text-muted-foreground">円 / {inputUnit === '個' ? '個' : inputUnit}</span>
                             </p>
                         </div>
                     </div>
