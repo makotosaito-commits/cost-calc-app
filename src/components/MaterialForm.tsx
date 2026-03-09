@@ -14,6 +14,43 @@ type MaterialFormProps = {
     updateMaterial: (id: string, changes: Partial<Material>) => Promise<void>;
 };
 
+type FormSnapshot = {
+    name: string;
+    category: string;
+    price: number | null;
+    displayQuantity: number | null;
+    yieldRate: number | null;
+    displayUnit: InputUnit;
+};
+
+const createSnapshot = (params: {
+    name: string;
+    category: string;
+    price: number | '';
+    displayQuantity: number | '';
+    yieldRate: number | '';
+    displayUnit: InputUnit;
+}): FormSnapshot => ({
+    name: params.name,
+    category: params.category,
+    price: params.price === '' ? null : toSafeNumber(params.price),
+    displayQuantity: params.displayQuantity === '' ? null : toSafeNumber(params.displayQuantity),
+    yieldRate: params.yieldRate === '' ? null : toSafeNumber(params.yieldRate),
+    displayUnit: params.displayUnit,
+});
+
+const isSameSnapshot = (a: FormSnapshot | null, b: FormSnapshot | null) => {
+    if (!a || !b) return false;
+    return (
+        a.name === b.name &&
+        a.category === b.category &&
+        a.price === b.price &&
+        a.displayQuantity === b.displayQuantity &&
+        a.yieldRate === b.yieldRate &&
+        a.displayUnit === b.displayUnit
+    );
+};
+
 export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updateMaterial }: MaterialFormProps) => {
     const [name, setName] = useState('');
     const [category, setCategory] = useState('');
@@ -22,6 +59,8 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
     const [yieldRate, setYieldRate] = useState<number | ''>('');
     const [displayUnit, setDisplayUnit] = useState<InputUnit>('g');
     const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
+    const [initialSnapshot, setInitialSnapshot] = useState<FormSnapshot | null>(null);
+    const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     const resetForm = () => {
         setName('');
@@ -30,25 +69,52 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
         setDisplayQuantity('');
         setYieldRate('');
         setDisplayUnit('g');
+        setInitialSnapshot(null);
     };
 
     useEffect(() => {
         if (!editingMaterial) {
+            setInitialSnapshot(null);
             return;
         }
 
-        setName(editingMaterial.name);
-        setCategory(editingMaterial.category);
-        setPrice(toSafeNumber(editingMaterial.purchase_price));
+        setStatusMessage(null);
+        const initialName = editingMaterial.name;
+        const initialCategory = editingMaterial.category;
+        const initialPrice = toSafeNumber(editingMaterial.purchase_price);
         const restored = resolveDisplayValues(editingMaterial);
-        setDisplayQuantity(restored.displayQuantity);
-        setYieldRate(
+        const initialDisplayQuantity = restored.displayQuantity;
+        const initialYieldRate =
             editingMaterial.yield_rate === null || editingMaterial.yield_rate === undefined
                 ? ''
-                : toSafeNumber(editingMaterial.yield_rate)
-        );
-        setDisplayUnit(restored.displayUnit);
+                : toSafeNumber(editingMaterial.yield_rate);
+        const initialDisplayUnit = restored.displayUnit;
+
+        setName(initialName);
+        setCategory(initialCategory);
+        setPrice(initialPrice);
+        setDisplayQuantity(initialDisplayQuantity);
+        setYieldRate(initialYieldRate);
+        setDisplayUnit(initialDisplayUnit);
+        setInitialSnapshot(createSnapshot({
+            name: initialName,
+            category: initialCategory,
+            price: initialPrice,
+            displayQuantity: initialDisplayQuantity,
+            yieldRate: initialYieldRate,
+            displayUnit: initialDisplayUnit,
+        }));
     }, [editingMaterial]);
+
+    useEffect(() => {
+        if (!statusMessage) return;
+
+        const timeoutId = window.setTimeout(() => {
+            setStatusMessage(null);
+        }, 3000);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [statusMessage]);
 
     useEffect(() => {
         if (price && displayQuantity && displayQuantity > 0) {
@@ -65,6 +131,16 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
         }
     }, [price, displayQuantity, displayUnit, yieldRate]);
 
+    const currentSnapshot = editingMaterial
+        ? createSnapshot({ name, category, price, displayQuantity, yieldRate, displayUnit })
+        : null;
+    const isDirty = Boolean(
+        editingMaterial &&
+        initialSnapshot &&
+        currentSnapshot &&
+        !isSameSnapshot(initialSnapshot, currentSnapshot)
+    );
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !price || !displayQuantity) return;
@@ -74,18 +150,38 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
             return;
         }
 
-        const normalizedYieldRate = yieldRate === '' ? null : toSafeNumber(yieldRate);
-        const baseUnit = normalizeInternalUnit(displayUnit);
-        const normalizedQty = normalizePurchaseQuantity(displayQuantity, displayUnit);
-        const normalizedDisplayQuantity = displayQuantity === '' ? null : toSafeNumber(displayQuantity);
-        const unitPrice = calculateMaterialUnitPrice({
-            price: toSafeNumber(price),
-            quantity: normalizedQty,
-            yieldRate: normalizedYieldRate,
-        });
+        setStatusMessage(null);
 
-        if (editingMaterial) {
-            await updateMaterial(editingMaterial.id, {
+        try {
+            const normalizedYieldRate = yieldRate === '' ? null : toSafeNumber(yieldRate);
+            const baseUnit = normalizeInternalUnit(displayUnit);
+            const normalizedQty = normalizePurchaseQuantity(displayQuantity, displayUnit);
+            const normalizedDisplayQuantity = displayQuantity === '' ? null : toSafeNumber(displayQuantity);
+            const unitPrice = calculateMaterialUnitPrice({
+                price: toSafeNumber(price),
+                quantity: normalizedQty,
+                yieldRate: normalizedYieldRate,
+            });
+
+            if (editingMaterial) {
+                await updateMaterial(editingMaterial.id, {
+                    name,
+                    category,
+                    purchase_price: toSafeNumber(price),
+                    purchase_quantity: normalizedQty,
+                    base_unit: baseUnit,
+                    purchase_display_quantity: normalizedDisplayQuantity,
+                    purchase_display_unit: displayUnit,
+                    yield_rate: normalizedYieldRate,
+                    calculated_unit_price: unitPrice,
+                });
+                setStatusMessage({ type: 'success', text: '歩留まりを反映しました' });
+                resetForm();
+                onFinishEdit();
+                return;
+            }
+
+            await addMaterial({
                 name,
                 category,
                 purchase_price: toSafeNumber(price),
@@ -96,24 +192,12 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                 yield_rate: normalizedYieldRate,
                 calculated_unit_price: unitPrice,
             });
+
             resetForm();
-            onFinishEdit();
-            return;
+        } catch (error) {
+            console.error(error);
+            setStatusMessage({ type: 'error', text: '更新に失敗しました。時間をおいて再度お試しください。' });
         }
-
-        await addMaterial({
-            name,
-            category,
-            purchase_price: toSafeNumber(price),
-            purchase_quantity: normalizedQty,
-            base_unit: baseUnit,
-            purchase_display_quantity: normalizedDisplayQuantity,
-            purchase_display_unit: displayUnit,
-            yield_rate: normalizedYieldRate,
-            calculated_unit_price: unitPrice,
-        });
-
-        resetForm();
     };
 
     const handleCancelEdit = () => {
@@ -129,6 +213,19 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
             </CardHeader>
             <CardContent className="p-4 md:p-6 pt-0">
                 <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
+                    {statusMessage && (
+                        <p
+                            aria-live="polite"
+                            className={`rounded-lg border px-3 py-2 text-xs font-medium ${
+                                statusMessage.type === 'success'
+                                    ? 'border-zinc-300 bg-zinc-50 text-zinc-700'
+                                    : 'border-destructive/30 bg-destructive/10 text-destructive'
+                            }`}
+                        >
+                            {statusMessage.text}
+                        </p>
+                    )}
+
                     <div className="space-y-1.5">
                         <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">名前</label>
                         <Input
@@ -227,6 +324,11 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                                 {calculatedPrice !== null ? Math.round(calculatedPrice).toLocaleString() : '0'} <span className="text-xs font-normal text-muted-foreground">円 / {normalizeInternalUnit(displayUnit)}</span>
                             </p>
                         </div>
+                        {editingMaterial && (
+                            <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
+                                これは保存前のプレビューです。反映するには「この内容で更新」を押してください。
+                            </p>
+                        )}
                     </div>
 
                     {editingMaterial ? (
@@ -239,7 +341,13 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                             >
                                 編集をキャンセル
                             </Button>
-                            <Button type="submit" className="w-full font-black uppercase tracking-widest h-12">
+                            <Button
+                                type="submit"
+                                disabled={!isDirty}
+                                className={`w-full font-black uppercase tracking-widest h-12 transition-all ${
+                                    isDirty ? 'ring-2 ring-zinc-900/60 shadow-lg' : ''
+                                }`}
+                            >
                                 この内容で更新
                             </Button>
                         </div>

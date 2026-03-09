@@ -30,6 +30,13 @@ export const MaterialList = ({ onEdit, materials, deleteMaterial }: MaterialList
         });
     };
 
+    const formatYieldRate = (yieldRate?: number | null) => {
+        if (yieldRate === null || yieldRate === undefined) return '';
+        const numericYieldRate = toSafeNumber(yieldRate);
+        if (numericYieldRate <= 0) return '';
+        return `（歩留まり${numericYieldRate}%）`;
+    };
+
     const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
     const categoryOptions = useMemo(() => {
@@ -142,7 +149,7 @@ export const MaterialList = ({ onEdit, materials, deleteMaterial }: MaterialList
                                         <div className="min-w-0 pr-2">
                                             <p className="font-bold text-foreground leading-tight break-words">{material.name}</p>
                                             <p className="mt-1 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                                                {toSafeNumber(material.purchase_price).toLocaleString()}円 / {toSafeNumber(purchaseDisplay.displayQuantity).toLocaleString()}{purchaseDisplay.displayUnit}
+                                                {toSafeNumber(material.purchase_price).toLocaleString()}円 / {toSafeNumber(purchaseDisplay.displayQuantity).toLocaleString()}{purchaseDisplay.displayUnit}{formatYieldRate(material.yield_rate)}
                                             </p>
                                             <p className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                                                 単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円/{internalUnit}
@@ -202,7 +209,7 @@ export const MaterialList = ({ onEdit, materials, deleteMaterial }: MaterialList
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="text-right font-mono text-xs">
-                                                    {toSafeNumber(material.purchase_price)}円 / {toSafeNumber(purchaseDisplay.displayQuantity).toLocaleString()}{purchaseDisplay.displayUnit}
+                                                    {toSafeNumber(material.purchase_price)}円 / {toSafeNumber(purchaseDisplay.displayQuantity).toLocaleString()}{purchaseDisplay.displayUnit}{formatYieldRate(material.yield_rate)}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex flex-col items-end leading-tight">
