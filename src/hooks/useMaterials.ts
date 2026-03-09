@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { db } from '../lib/db';
 import { supabase } from '../lib/supabase';
 import { Material } from '../types';
-import { normalizeYieldRate, toSafeNumber } from '../lib/calculator';
+import { inferYieldRateFromUnitPrice, normalizeYieldRate, toSafeNumber } from '../lib/calculator';
 import { sanitizeBaseUnit, sanitizeDisplayUnit } from '../lib/materialUnits';
 
 type MaterialDeleteDb = {
@@ -95,13 +95,21 @@ export const useMaterials = () => {
         const normalized: Material[] = (data ?? []).map((row) => {
             const hasYieldRateColumn = Object.prototype.hasOwnProperty.call(row, 'yield_rate');
             const rawYieldRate = hasYieldRateColumn ? row.yield_rate : undefined;
+            const purchasePrice = Number(row.purchase_price ?? 0);
+            const purchaseQuantity = sanitizePurchaseQuantity(row.purchase_quantity);
+            const calculatedUnitPrice = Number(row.calculated_unit_price ?? 0);
+            const inferredYieldRate = inferYieldRateFromUnitPrice(
+                purchasePrice,
+                purchaseQuantity,
+                calculatedUnitPrice
+            );
 
             return {
                 id: String(row.id),
                 name: String(row.name ?? ''),
                 category: String(row.category ?? ''),
-                purchase_price: Number(row.purchase_price ?? 0),
-                purchase_quantity: sanitizePurchaseQuantity(row.purchase_quantity),
+                purchase_price: purchasePrice,
+                purchase_quantity: purchaseQuantity,
                 base_unit: sanitizeBaseUnit(row.base_unit, row.unit),
                 purchase_display_quantity: row.purchase_display_quantity === null || row.purchase_display_quantity === undefined
                     ? null
@@ -111,9 +119,9 @@ export const useMaterials = () => {
                     })(),
                 purchase_display_unit: sanitizeDisplayUnit(row.purchase_display_unit),
                 yield_rate: rawYieldRate === undefined
-                    ? undefined
+                    ? inferredYieldRate
                     : (rawYieldRate === null ? null : normalizeYieldRate(rawYieldRate)),
-                calculated_unit_price: Number(row.calculated_unit_price ?? 0),
+                calculated_unit_price: calculatedUnitPrice,
             };
         });
 

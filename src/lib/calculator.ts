@@ -96,6 +96,38 @@ export const calculateMaterialUnitPrice = ({
 };
 
 /**
+ * yield_rate が取得できない環境向けに、保存済みの単価から歩留まりを推定する。
+ * inferredYield = price / (quantity * unitPrice) * 100
+ * - 推定不能/範囲外: null
+ * - 100%相当(誤差以内): null（未設定互換）
+ */
+export const inferYieldRateFromUnitPrice = (
+    price: unknown,
+    quantity: unknown,
+    unitPrice: unknown,
+    nearHundredTolerance = 0.01
+): number | null => {
+    const numericPrice = toSafeNumber(price);
+    const numericQuantity = toSafeNumber(quantity);
+    const numericUnitPrice = toSafeNumber(unitPrice);
+
+    if (numericPrice <= 0 || numericQuantity <= 0 || numericUnitPrice <= 0) {
+        return null;
+    }
+
+    const inferred = (numericPrice / (numericQuantity * numericUnitPrice)) * 100;
+    if (!Number.isFinite(inferred) || inferred <= 0 || inferred > 100) {
+        return null;
+    }
+
+    if (Math.abs(inferred - 100) <= nearHundredTolerance) {
+        return null;
+    }
+
+    return inferred;
+};
+
+/**
  * 単位を変換して基準単位(g, ml, 個)での数量を返す
  * @param amount 数量
  * @param unit 単位文字列

@@ -3,6 +3,7 @@ import {
     calculateUnitPrice,
     calculateUnitPriceWithYield,
     calculateMaterialUnitPrice,
+    inferYieldRateFromUnitPrice,
     normalizeAmount,
     normalizeYieldRate,
     calculateLineCost,
@@ -95,6 +96,22 @@ describe('Calculator Logic', () => {
                 quantity: 200,
                 yieldRate: 80,
             })).toBe(12.5);
+        });
+    });
+
+    describe('inferYieldRateFromUnitPrice', () => {
+        it('infers yield rate from saved unit price', () => {
+            expect(inferYieldRateFromUnitPrice(2000, 2000, 2)).toBe(50);
+        });
+
+        it('returns null for near-100% inferred values', () => {
+            expect(inferYieldRateFromUnitPrice(2000, 2000, 1)).toBeNull();
+        });
+
+        it('returns null for invalid inputs', () => {
+            expect(inferYieldRateFromUnitPrice(0, 2000, 2)).toBeNull();
+            expect(inferYieldRateFromUnitPrice(2000, 0, 2)).toBeNull();
+            expect(inferYieldRateFromUnitPrice(2000, 2000, 0)).toBeNull();
         });
     });
 

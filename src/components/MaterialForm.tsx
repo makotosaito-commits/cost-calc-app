@@ -84,10 +84,9 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
         const initialPrice = toSafeNumber(editingMaterial.purchase_price);
         const restored = resolveDisplayValues(editingMaterial);
         const initialDisplayQuantity = restored.displayQuantity;
-        const initialYieldRate =
-            editingMaterial.yield_rate === null || editingMaterial.yield_rate === undefined
-                ? ''
-                : toSafeNumber(editingMaterial.yield_rate);
+        const initialYieldRate = editingMaterial.yield_rate === null
+            ? ''
+            : toSafeNumber(editingMaterial.yield_rate);
         const initialDisplayUnit = restored.displayUnit;
 
         setName(initialName);
