@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
-import { calculateUnitPrice, normalizeAmount, toSafeNumber } from '../lib/calculator';
+import { calculateUnitPriceWithYield, normalizeAmount, toSafeNumber } from '../lib/calculator';
 import { Material } from '../types';
 
 type MaterialListProps = {
@@ -19,9 +19,9 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY);
 
-    const getUnitPrice = (price: number, quantity: number, unit: string, fallback?: number) => {
+    const getUnitPrice = (price: number, quantity: number, unit: string, yieldRate?: number | null, fallback?: number) => {
         const normalizedQty = normalizeAmount(toSafeNumber(quantity), unit);
-        if (normalizedQty > 0) return calculateUnitPrice(toSafeNumber(price), normalizedQty);
+        if (normalizedQty > 0) return calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, yieldRate);
         return toSafeNumber(fallback);
     };
 
@@ -137,7 +137,7 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
                                             {toSafeNumber(material.purchase_price).toLocaleString()}円 / {toSafeNumber(material.purchase_quantity).toLocaleString()}{material.base_unit}
                                         </p>
                                         <p className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                                            単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.calculated_unit_price)).toLocaleString()}円/{material.base_unit}
+                                            単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円/{material.base_unit}
                                         </p>
                                     </div>
                                     <Button
@@ -195,7 +195,7 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
                                             <TableCell className="text-right">
                                                 <div className="flex flex-col items-end leading-tight">
                                                     <span className="text-lg font-black text-foreground tabular-nums">
-                                                        {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.calculated_unit_price)).toLocaleString()}円
+                                                        {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.base_unit, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円
                                                     </span>
                                                     <span className="text-[10px] text-muted-foreground font-bold tracking-wide">
                                                         /{material.base_unit}

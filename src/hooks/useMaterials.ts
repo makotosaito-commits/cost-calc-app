@@ -40,11 +40,24 @@ export const useMaterials = () => {
             return;
         }
 
-        const { data, error } = await supabase
+        const selectWithYieldRate = 'id,name,category,purchase_price,purchase_quantity,base_unit,yield_rate,calculated_unit_price';
+        const selectWithoutYieldRate = 'id,name,category,purchase_price,purchase_quantity,base_unit,calculated_unit_price';
+
+        let { data, error } = await supabase
             .from('materials')
-            .select('id,name,category,purchase_price,purchase_quantity,base_unit,calculated_unit_price')
+            .select(selectWithYieldRate)
             .eq('user_id', userId)
             .order('name', { ascending: true });
+
+        if (error && error.message.toLowerCase().includes('yield_rate')) {
+            const fallback = await supabase
+                .from('materials')
+                .select(selectWithoutYieldRate)
+                .eq('user_id', userId)
+                .order('name', { ascending: true });
+            data = fallback.data;
+            error = fallback.error;
+        }
 
         if (error) {
             console.error('Failed to fetch materials from Supabase:', error.message);
@@ -59,6 +72,9 @@ export const useMaterials = () => {
             purchase_price: Number(row.purchase_price ?? 0),
             purchase_quantity: Number(row.purchase_quantity ?? 0),
             base_unit: (row.base_unit ?? 'g') as Material['base_unit'],
+            yield_rate: row.yield_rate === null || row.yield_rate === undefined
+                ? null
+                : Number(row.yield_rate),
             calculated_unit_price: Number(row.calculated_unit_price ?? 0),
         }));
 
@@ -83,9 +99,15 @@ export const useMaterials = () => {
             purchase_price: material.purchase_price,
             purchase_quantity: material.purchase_quantity,
             base_unit: material.base_unit,
+            yield_rate: material.yield_rate ?? null,
             calculated_unit_price: material.calculated_unit_price ?? 0,
         };
-        const { error } = await supabase.from('materials').insert(payload);
+        let { error } = await supabase.from('materials').insert(payload);
+        if (error && error.message.toLowerCase().includes('yield_rate')) {
+            const { yield_rate: _omit, ...legacyPayload } = payload;
+            const fallback = await supabase.from('materials').insert(legacyPayload);
+            error = fallback.error;
+        }
         if (error) {
             throw new Error(error.message);
         }
@@ -98,11 +120,21 @@ export const useMaterials = () => {
             throw new Error('ログイン状態を確認できません。');
         }
 
-        const { error } = await supabase
+        let { error } = await supabase
             .from('materials')
             .update(changes)
             .eq('id', id)
             .eq('user_id', userData.user.id);
+
+        if (error && error.message.toLowerCase().includes('yield_rate') && Object.prototype.hasOwnProperty.call(changes, 'yield_rate')) {
+            const { yield_rate: _omit, ...legacyChanges } = changes;
+            const fallback = await supabase
+                .from('materials')
+                .update(legacyChanges)
+                .eq('id', id)
+                .eq('user_id', userData.user.id);
+            error = fallback.error;
+        }
 
         if (error) {
             throw new Error(error.message);

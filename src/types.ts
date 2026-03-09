@@ -7,6 +7,8 @@ export interface Material {
     purchase_price: number;
     purchase_quantity: number;
     base_unit: BaseUnit;
+    // 材料の歩留まり (%)。未入力は null として扱い、計算時に 100% 扱いとする
+    yield_rate?: number | null;
     // 自動計算される単価 (円/base_unit)
     calculated_unit_price?: number;
 }

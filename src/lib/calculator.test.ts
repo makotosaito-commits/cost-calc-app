@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { calculateUnitPrice, normalizeAmount, calculateLineCost, toSafeNumber, calculateMenuMetrics } from './calculator';
+import {
+    calculateUnitPrice,
+    calculateUnitPriceWithYield,
+    normalizeAmount,
+    normalizeYieldRate,
+    calculateLineCost,
+    toSafeNumber,
+    calculateMenuMetrics
+} from './calculator';
 
 describe('Calculator Logic', () => {
     describe('calculateUnitPrice', () => {
@@ -17,6 +25,39 @@ describe('Calculator Logic', () => {
 
         it('returns 0 if quantity is 0', () => {
             expect(calculateUnitPrice(1000, 0)).toBe(0);
+        });
+    });
+
+    describe('normalizeYieldRate', () => {
+        it('returns 100 for nullish and out-of-range values', () => {
+            expect(normalizeYieldRate(null)).toBe(100);
+            expect(normalizeYieldRate(undefined)).toBe(100);
+            expect(normalizeYieldRate(0)).toBe(100);
+            expect(normalizeYieldRate(-10)).toBe(100);
+            expect(normalizeYieldRate(120)).toBe(100);
+        });
+
+        it('keeps valid yield rate values', () => {
+            expect(normalizeYieldRate(80)).toBe(80);
+            expect(normalizeYieldRate(87.5)).toBe(87.5);
+            expect(normalizeYieldRate(100)).toBe(100);
+        });
+    });
+
+    describe('calculateUnitPriceWithYield', () => {
+        it('treats missing yield as 100%', () => {
+            expect(calculateUnitPriceWithYield(1000, 1000, null)).toBe(1);
+            expect(calculateUnitPriceWithYield(1000, 1000, undefined)).toBe(1);
+        });
+
+        it('calculates unit price with yield', () => {
+            expect(calculateUnitPriceWithYield(1000, 1000, 80)).toBe(1.25);
+            expect(calculateUnitPriceWithYield(1000, 1000, 87.5)).toBeCloseTo(1.142857, 6);
+        });
+
+        it('falls back to 100% for invalid yield values', () => {
+            expect(calculateUnitPriceWithYield(1000, 1000, 0)).toBe(1);
+            expect(calculateUnitPriceWithYield(1000, 1000, 120)).toBe(1);
         });
     });
 

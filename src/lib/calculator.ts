@@ -32,6 +32,34 @@ export const calculateUnitPrice = (price: number, qty: number): number => {
 };
 
 /**
+ * 歩留まり(%)を正規化する。
+ * - 未入力/不正値/範囲外: 100
+ * - 有効範囲: 0 より大きく 100 以下
+ */
+export const normalizeYieldRate = (yieldRate: unknown): number => {
+    const numericYieldRate = toSafeNumber(yieldRate);
+    if (numericYieldRate <= 0 || numericYieldRate > 100) return 100;
+    return numericYieldRate;
+};
+
+/**
+ * 歩留まりを考慮した基準単価を計算する
+ * 基準単価 = 価格 ÷ (数量 × 歩留まり ÷ 100)
+ */
+export const calculateUnitPriceWithYield = (
+    price: unknown,
+    qty: unknown,
+    yieldRate?: unknown
+): number => {
+    const numericPrice = toSafeNumber(price);
+    const numericQty = toSafeNumber(qty);
+    const normalizedYieldRate = normalizeYieldRate(yieldRate);
+    const effectiveQty = numericQty * (normalizedYieldRate / 100);
+    if (effectiveQty <= 0) return 0;
+    return numericPrice / effectiveQty;
+};
+
+/**
  * 単位を変換して基準単位(g, ml, 個)での数量を返す
  * @param amount 数量
  * @param unit 単位文字列

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRecipes } from '../hooks/useRecipes';
 import { useMaterials } from '../hooks/useMaterials';
-import { calculateLineCost, calculateUnitPrice, normalizeAmount, toSafeNumber } from '../lib/calculator';
+import { calculateLineCost, calculateUnitPriceWithYield, normalizeAmount, toSafeNumber } from '../lib/calculator';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './ui/Table';
@@ -32,7 +32,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
         if (!material) return 0;
         const normalizedQty = normalizeAmount(toSafeNumber(material.purchase_quantity), material.base_unit);
         if (normalizedQty > 0) {
-            return calculateUnitPrice(toSafeNumber(material.purchase_price), normalizedQty);
+            return calculateUnitPriceWithYield(toSafeNumber(material.purchase_price), normalizedQty, material.yield_rate);
         }
         return toSafeNumber(material.calculated_unit_price);
     };

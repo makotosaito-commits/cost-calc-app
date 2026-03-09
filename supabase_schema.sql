@@ -94,6 +94,9 @@ create trigger on_auth_user_created
 -- Migration notes for current app schema (menus/recipes split by user)
 -- ------------------------------------------------------------
 
+alter table if exists materials
+  add column if not exists yield_rate numeric;
+
 alter table if exists menus
   add column if not exists sales_price numeric default 0,
   add column if not exists total_cost numeric default 0,

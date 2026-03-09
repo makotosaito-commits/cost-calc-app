@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMaterials } from '../hooks/useMaterials';
-import { calculateUnitPrice, normalizeAmount, toSafeNumber } from '../lib/calculator';
+import { calculateUnitPriceWithYield, normalizeAmount, toSafeNumber } from '../lib/calculator';
 import { BaseUnit, Material } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -18,6 +18,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
     const [category, setCategory] = useState('');
     const [price, setPrice] = useState<number | ''>('');
     const [quantity, setQuantity] = useState<number | ''>('');
+    const [yieldRate, setYieldRate] = useState<number | ''>('');
     const [inputUnit, setInputUnit] = useState('g');
     const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
 
@@ -26,6 +27,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
         setCategory('');
         setPrice('');
         setQuantity('');
+        setYieldRate('');
         setInputUnit('g');
     };
 
@@ -38,18 +40,24 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
         setCategory(editingMaterial.category);
         setPrice(toSafeNumber(editingMaterial.purchase_price));
         setQuantity(toSafeNumber(editingMaterial.purchase_quantity));
+        setYieldRate(
+            editingMaterial.yield_rate === null || editingMaterial.yield_rate === undefined
+                ? ''
+                : toSafeNumber(editingMaterial.yield_rate)
+        );
         setInputUnit(editingMaterial.base_unit);
     }, [editingMaterial]);
 
     useEffect(() => {
         if (price && quantity && quantity > 0) {
             const normalizedQty = normalizeAmount(toSafeNumber(quantity), inputUnit);
-            const unitPrice = calculateUnitPrice(toSafeNumber(price), normalizedQty);
+            const normalizedYieldRate = yieldRate === '' ? null : toSafeNumber(yieldRate);
+            const unitPrice = calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, normalizedYieldRate);
             setCalculatedPrice(unitPrice);
         } else {
             setCalculatedPrice(null);
         }
-    }, [price, quantity, inputUnit]);
+    }, [price, quantity, inputUnit, yieldRate]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -59,8 +67,14 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
         if (inputUnit === 'ml') baseUnit = 'ml';
         if (inputUnit === '個') baseUnit = '個';
 
+        if (yieldRate !== '' && (toSafeNumber(yieldRate) <= 0 || toSafeNumber(yieldRate) > 100)) {
+            alert('歩留まり（%）は 0より大きく100以下で入力してください。');
+            return;
+        }
+
+        const normalizedYieldRate = yieldRate === '' ? null : toSafeNumber(yieldRate);
         const normalizedQty = normalizeAmount(toSafeNumber(quantity), inputUnit);
-        const unitPrice = calculateUnitPrice(toSafeNumber(price), normalizedQty);
+        const unitPrice = calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, normalizedYieldRate);
 
         if (editingMaterial) {
             await updateMaterial(editingMaterial.id, {
@@ -69,6 +83,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                 purchase_price: toSafeNumber(price),
                 purchase_quantity: normalizedQty,
                 base_unit: baseUnit,
+                yield_rate: normalizedYieldRate,
                 calculated_unit_price: unitPrice,
             });
             resetForm();
@@ -82,6 +97,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
             purchase_price: toSafeNumber(price),
             purchase_quantity: normalizedQty,
             base_unit: baseUnit,
+            yield_rate: normalizedYieldRate,
             calculated_unit_price: unitPrice,
         });
 
@@ -153,6 +169,26 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                                 className="bg-background border-border"
                             />
                         </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">歩留まり（%）</label>
+                        <Input
+                            type="number"
+                            value={yieldRate}
+                            onChange={(e) => {
+                                const raw = e.target.value;
+                                setYieldRate(raw === '' ? '' : toSafeNumber(raw));
+                            }}
+                            placeholder="例: 80"
+                            step="any"
+                            min="0.01"
+                            max="100"
+                            className="bg-background border-border"
+                        />
+                        <p className="text-xs text-muted-foreground pl-1">
+                            任意入力です。未入力の場合は100%で計算されます。
+                        </p>
                     </div>
 
                     <div className="space-y-1.5">
