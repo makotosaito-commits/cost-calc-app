@@ -6,6 +6,7 @@ import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 import { calculateUnitPriceWithYield, normalizeAmount, toSafeNumber } from '../lib/calculator';
 import { Material } from '../types';
+import { resolveDisplayValues } from '../lib/materialUnits';
 
 type MaterialListProps = {
     onEdit: (material: Material) => void;
@@ -23,18 +24,6 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
         const normalizedQty = normalizeAmount(toSafeNumber(quantity), unit);
         if (normalizedQty > 0) return calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, yieldRate);
         return toSafeNumber(fallback);
-    };
-
-    const getPurchaseDisplay = (material: Material) => {
-        const quantity =
-            material.purchase_display_quantity === null || material.purchase_display_quantity === undefined
-                ? toSafeNumber(material.purchase_quantity)
-                : toSafeNumber(material.purchase_display_quantity);
-        const unit =
-            material.purchase_display_unit === null || material.purchase_display_unit === undefined
-                ? material.base_unit
-                : material.purchase_display_unit;
-        return { quantity, unit };
     };
 
     const normalizedSearchTerm = searchTerm.trim().toLowerCase();
@@ -141,7 +130,7 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
                 <>
                     <div className="md:hidden divide-y divide-border">
                         {filteredMaterials.map((material) => {
-                            const purchaseDisplay = getPurchaseDisplay(material);
+                            const purchaseDisplay = resolveDisplayValues(material);
                             return (
                                 <div key={material.id} className="py-3 px-1 rounded-lg bg-card border border-border">
                                     <div className="flex items-start justify-between gap-3">
@@ -197,7 +186,7 @@ export const MaterialList = ({ onEdit }: MaterialListProps) => {
                                 </TableHeader>
                                 <TableBody>
                                     {filteredMaterials.map((material) => {
-                                        const purchaseDisplay = getPurchaseDisplay(material);
+                                        const purchaseDisplay = resolveDisplayValues(material);
                                         return (
                                             <TableRow key={material.id} className="border-border hover:bg-muted/50">
                                                 <TableCell className="font-bold text-foreground py-4">{material.name}</TableCell>

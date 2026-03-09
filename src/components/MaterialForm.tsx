@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useMaterials } from '../hooks/useMaterials';
-import { calculateUnitPriceWithYield, normalizeAmount, toSafeNumber } from '../lib/calculator';
-import { BaseUnit, InputUnit, Material } from '../types';
+import { calculateUnitPriceWithYield, toSafeNumber } from '../lib/calculator';
+import { InputUnit, Material } from '../types';
+import { normalizeInternalUnit, normalizePurchaseQuantity, resolveDisplayValues } from '../lib/materialUnits';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
@@ -17,18 +18,18 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
     const [name, setName] = useState('');
     const [category, setCategory] = useState('');
     const [price, setPrice] = useState<number | ''>('');
-    const [quantity, setQuantity] = useState<number | ''>('');
+    const [displayQuantity, setDisplayQuantity] = useState<number | ''>('');
     const [yieldRate, setYieldRate] = useState<number | ''>('');
-    const [inputUnit, setInputUnit] = useState<InputUnit>('g');
+    const [displayUnit, setDisplayUnit] = useState<InputUnit>('g');
     const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
 
     const resetForm = () => {
         setName('');
         setCategory('');
         setPrice('');
-        setQuantity('');
+        setDisplayQuantity('');
         setYieldRate('');
-        setInputUnit('g');
+        setDisplayUnit('g');
     };
 
     useEffect(() => {
@@ -39,42 +40,30 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
         setName(editingMaterial.name);
         setCategory(editingMaterial.category);
         setPrice(toSafeNumber(editingMaterial.purchase_price));
-        setQuantity(
-            editingMaterial.purchase_display_quantity === null || editingMaterial.purchase_display_quantity === undefined
-                ? toSafeNumber(editingMaterial.purchase_quantity)
-                : toSafeNumber(editingMaterial.purchase_display_quantity)
-        );
+        const restored = resolveDisplayValues(editingMaterial);
+        setDisplayQuantity(restored.displayQuantity);
         setYieldRate(
             editingMaterial.yield_rate === null || editingMaterial.yield_rate === undefined
                 ? ''
                 : toSafeNumber(editingMaterial.yield_rate)
         );
-        setInputUnit(
-            editingMaterial.purchase_display_unit === null || editingMaterial.purchase_display_unit === undefined
-                ? editingMaterial.base_unit
-                : editingMaterial.purchase_display_unit
-        );
+        setDisplayUnit(restored.displayUnit);
     }, [editingMaterial]);
 
     useEffect(() => {
-        if (price && quantity && quantity > 0) {
-            const normalizedQty = normalizeAmount(toSafeNumber(quantity), inputUnit);
+        if (price && displayQuantity && displayQuantity > 0) {
+            const normalizedQty = normalizePurchaseQuantity(displayQuantity, displayUnit);
             const normalizedYieldRate = yieldRate === '' ? null : toSafeNumber(yieldRate);
             const unitPrice = calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, normalizedYieldRate);
             setCalculatedPrice(unitPrice);
         } else {
             setCalculatedPrice(null);
         }
-    }, [price, quantity, inputUnit, yieldRate]);
+    }, [price, displayQuantity, displayUnit, yieldRate]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !price || !quantity) return;
-
-        let baseUnit: BaseUnit = 'g';
-        if (inputUnit === 'kg') baseUnit = 'g';
-        if (inputUnit === 'ml') baseUnit = 'ml';
-        if (inputUnit === '個') baseUnit = '個';
+        if (!name || !price || !displayQuantity) return;
 
         if (yieldRate !== '' && (toSafeNumber(yieldRate) <= 0 || toSafeNumber(yieldRate) > 100)) {
             alert('歩留まり（%）は 0より大きく100以下で入力してください。');
@@ -82,8 +71,9 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
         }
 
         const normalizedYieldRate = yieldRate === '' ? null : toSafeNumber(yieldRate);
-        const normalizedQty = normalizeAmount(toSafeNumber(quantity), inputUnit);
-        const displayQuantity = quantity === '' ? null : toSafeNumber(quantity);
+        const baseUnit = normalizeInternalUnit(displayUnit);
+        const normalizedQty = normalizePurchaseQuantity(displayQuantity, displayUnit);
+        const normalizedDisplayQuantity = displayQuantity === '' ? null : toSafeNumber(displayQuantity);
         const unitPrice = calculateUnitPriceWithYield(toSafeNumber(price), normalizedQty, normalizedYieldRate);
 
         if (editingMaterial) {
@@ -93,8 +83,8 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                 purchase_price: toSafeNumber(price),
                 purchase_quantity: normalizedQty,
                 base_unit: baseUnit,
-                purchase_display_quantity: displayQuantity,
-                purchase_display_unit: inputUnit,
+                purchase_display_quantity: normalizedDisplayQuantity,
+                purchase_display_unit: displayUnit,
                 yield_rate: normalizedYieldRate,
                 calculated_unit_price: unitPrice,
             });
@@ -109,8 +99,8 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
             purchase_price: toSafeNumber(price),
             purchase_quantity: normalizedQty,
             base_unit: baseUnit,
-            purchase_display_quantity: displayQuantity,
-            purchase_display_unit: inputUnit,
+            purchase_display_quantity: normalizedDisplayQuantity,
+            purchase_display_unit: displayUnit,
             yield_rate: normalizedYieldRate,
             calculated_unit_price: unitPrice,
         });
@@ -172,10 +162,10 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                             <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">仕入数量</label>
                             <Input
                                 type="number"
-                                value={quantity}
+                                value={displayQuantity}
                                 onChange={(e) => {
                                     const raw = e.target.value;
-                                    setQuantity(raw === '' ? '' : toSafeNumber(raw));
+                                    setDisplayQuantity(raw === '' ? '' : toSafeNumber(raw));
                                 }}
                                 placeholder="1"
                                 required
@@ -210,8 +200,8 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                         <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">単位</label>
                         <SegmentedControl
                             options={['g', 'kg', 'ml', '個']}
-                            value={inputUnit}
-                            onChange={(value) => setInputUnit(value as InputUnit)}
+                            value={displayUnit}
+                            onChange={(value) => setDisplayUnit(value as InputUnit)}
                             className="w-full bg-background border border-border"
                         />
                     </div>
@@ -226,7 +216,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit }: MaterialFormProp
                         )}
                         <div className={`rounded-xl border border-border p-4 transition-all duration-300 ${calculatedPrice !== null ? 'bg-background opacity-100' : 'bg-transparent opacity-30 select-none'}`}>
                             <p className="text-center text-sm font-bold text-foreground">
-                                {calculatedPrice !== null ? Math.round(calculatedPrice).toLocaleString() : '0'} <span className="text-xs font-normal text-muted-foreground">円 / {inputUnit === 'kg' ? 'g' : inputUnit}</span>
+                                {calculatedPrice !== null ? Math.round(calculatedPrice).toLocaleString() : '0'} <span className="text-xs font-normal text-muted-foreground">円 / {normalizeInternalUnit(displayUnit)}</span>
                             </p>
                         </div>
                     </div>
