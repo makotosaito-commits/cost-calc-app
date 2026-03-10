@@ -8,7 +8,7 @@ import { LegalPage } from './components/LegalPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { db } from './lib/db';
-import { supabase, supabaseProjectHost } from './lib/supabase';
+import { supabase } from './lib/supabase';
 import { useMaterials } from './hooks/useMaterials';
 import { useMenus } from './hooks/useMenus';
 import { Material } from './types';
@@ -65,17 +65,12 @@ const MaterialsRoute = ({
 
 type SettingsRouteProps = {
     userEmail: string | null;
-    userId: string | null;
 };
 
-const SettingsRoute = ({ userEmail, userId }: SettingsRouteProps) => (
+const SettingsRoute = ({ userEmail }: SettingsRouteProps) => (
     <Suspense fallback={<RouteLoadingFallback />}>
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <SettingsPage
-                currentUserEmail={userEmail}
-                currentUserId={userId}
-                projectHost={supabaseProjectHost}
-            />
+            <SettingsPage currentUserEmail={userEmail} />
         </div>
     </Suspense>
 );
@@ -202,7 +197,7 @@ function App() {
                     />
                     <Route
                         path="/settings"
-                        element={<SettingsRoute userEmail={currentUserEmail} userId={currentUserId} />}
+                        element={<SettingsRoute userEmail={currentUserEmail} />}
                     />
                     <Route path="*" element={<Navigate to="/menu" replace />} />
                 </Route>
