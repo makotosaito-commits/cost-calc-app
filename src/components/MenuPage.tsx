@@ -12,13 +12,14 @@ import { Material, Menu } from '../types';
 
 type MenuPageProps = {
     menus: Menu[];
+    userId: string;
     addMenu: (menu: Omit<Menu, 'id' | 'user_id'>) => Promise<void>;
     updateMenu: (id: string, changes: Partial<Menu>) => Promise<void>;
     deleteMenu: (id: string) => Promise<void>;
     materials: Material[];
 };
 
-export const MenuPage = ({ menus, addMenu, updateMenu, deleteMenu, materials }: MenuPageProps) => {
+export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, materials }: MenuPageProps) => {
     const { settings } = useCostRateSettings();
     const { hasUnsavedMenuChanges, setHasUnsavedMenuChanges } = useUnsavedChanges();
     const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
@@ -231,6 +232,7 @@ export const MenuPage = ({ menus, addMenu, updateMenu, deleteMenu, materials }: 
                 <div className="space-y-6">
                     <RecipeEditor
                         menuId={selectedMenu.id}
+                        userId={userId}
                         materials={materials}
                         onTotalCostChange={handleTotalCostChange}
                     />

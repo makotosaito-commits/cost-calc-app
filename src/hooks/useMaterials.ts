@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
-import { db } from '../lib/db';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Material } from '../types';
 import { inferYieldRateFromUnitPrice, normalizeYieldRate, toSafeNumber } from '../lib/calculator';
@@ -31,8 +30,9 @@ export const deleteMaterialWithRecipes = async (database: MaterialDeleteDb, id: 
     });
 };
 
-export const useMaterials = () => {
+export const useMaterials = (userId?: string | null) => {
     const [materials, setMaterials] = useState<Material[]>([]);
+    const refetchTimerRef = useRef<number | null>(null);
 
     const hasMissingColumn = (errorMessage: string, columns: string[]) => {
         const message = errorMessage.toLowerCase();
@@ -60,8 +60,6 @@ export const useMaterials = () => {
     };
 
     const fetchMaterials = useCallback(async () => {
-        const { data: userData } = await supabase.auth.getUser();
-        const userId = userData.user?.id;
         if (!userId) {
             setMaterials([]);
             return;
@@ -126,21 +124,58 @@ export const useMaterials = () => {
         });
 
         setMaterials(normalized);
-    }, []);
+    }, [userId]);
+
+    const scheduleRefetch = useCallback(() => {
+        if (refetchTimerRef.current) {
+            window.clearTimeout(refetchTimerRef.current);
+        }
+        refetchTimerRef.current = window.setTimeout(() => {
+            refetchTimerRef.current = null;
+            void fetchMaterials();
+        }, 120);
+    }, [fetchMaterials]);
 
     useEffect(() => {
         void fetchMaterials();
     }, [fetchMaterials]);
 
+    useEffect(() => {
+        if (!userId) return;
+
+        const channel = supabase
+            .channel(`materials-sync-${userId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'materials',
+                    filter: `user_id=eq.${userId}`,
+                },
+                () => {
+                    scheduleRefetch();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            if (refetchTimerRef.current) {
+                window.clearTimeout(refetchTimerRef.current);
+                refetchTimerRef.current = null;
+            }
+            void supabase.removeChannel(channel);
+        };
+    }, [scheduleRefetch, userId]);
+
     const addMaterial = useCallback(async (material: Omit<Material, 'id'>) => {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) {
+        if (!userId) {
             throw new Error('ログイン状態を確認できません。');
         }
         const id = crypto.randomUUID();
         const payload = {
             id,
-            user_id: userData.user.id,
+            user_id: userId,
             name: material.name,
             category: material.category,
             purchase_price: material.purchase_price,
@@ -179,11 +214,10 @@ export const useMaterials = () => {
             throw new Error(error.message);
         }
         await fetchMaterials();
-    }, [fetchMaterials]);
+    }, [fetchMaterials, userId]);
 
     const updateMaterial = useCallback(async (id: string, changes: Partial<Material>) => {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) {
+        if (!userId) {
             throw new Error('ログイン状態を確認できません。');
         }
 
@@ -213,21 +247,21 @@ export const useMaterials = () => {
             .from('materials')
             .update(updatePayload)
             .eq('id', id)
-            .eq('user_id', userData.user.id);
+            .eq('user_id', userId);
 
         if (error && hasMissingColumn(error.message, ['purchase_display_quantity', 'purchase_display_unit'])) {
             const fallback = await supabase
                 .from('materials')
                 .update(changesWithoutDisplay)
                 .eq('id', id)
-                .eq('user_id', userData.user.id);
+                .eq('user_id', userId);
             error = fallback.error;
             if (error && hasMissingColumn(error.message, ['yield_rate'])) {
                 const secondFallback = await supabase
                     .from('materials')
                     .update(changesWithoutDisplayAndYield)
                     .eq('id', id)
-                    .eq('user_id', userData.user.id);
+                    .eq('user_id', userId);
                 error = secondFallback.error;
             }
         } else if (error && hasMissingColumn(error.message, ['yield_rate'])) {
@@ -235,14 +269,14 @@ export const useMaterials = () => {
                 .from('materials')
                 .update(changesWithoutYield)
                 .eq('id', id)
-                .eq('user_id', userData.user.id);
+                .eq('user_id', userId);
             error = fallback.error;
             if (error && hasMissingColumn(error.message, ['purchase_display_quantity', 'purchase_display_unit'])) {
                 const secondFallback = await supabase
                     .from('materials')
                     .update(changesWithoutDisplayAndYield)
                     .eq('id', id)
-                    .eq('user_id', userData.user.id);
+                    .eq('user_id', userId);
                 error = secondFallback.error;
             }
         }
@@ -251,11 +285,10 @@ export const useMaterials = () => {
             throw new Error(error.message);
         }
         await fetchMaterials();
-    }, [fetchMaterials]);
+    }, [fetchMaterials, userId]);
 
     const deleteMaterial = useCallback(async (id: string) => {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) {
+        if (!userId) {
             throw new Error('ログイン状態を確認できません。');
         }
 
@@ -263,16 +296,13 @@ export const useMaterials = () => {
             .from('materials')
             .delete()
             .eq('id', id)
-            .eq('user_id', userData.user.id);
+            .eq('user_id', userId);
 
         if (error) {
             throw new Error(error.message);
         }
-
-        // menus/recipes は現段階で Dexie なので、ローカル整合性は維持する
-        await db.recipes.where('material_id').equals(id).delete();
         await fetchMaterials();
-    }, [fetchMaterials]);
+    }, [fetchMaterials, userId]);
 
     return {
         materials,

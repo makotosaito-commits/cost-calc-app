@@ -11,3 +11,11 @@ export const supabase = createClient(
     supabaseUrl,
     supabaseAnonKey
 );
+
+export const supabaseProjectHost = (() => {
+    try {
+        return new URL(supabaseUrl).host;
+    } catch {
+        return String(supabaseUrl);
+    }
+})();

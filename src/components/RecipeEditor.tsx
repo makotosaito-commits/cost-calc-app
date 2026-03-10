@@ -9,6 +9,7 @@ import { Material } from '../types';
 
 interface RecipeEditorProps {
     menuId: string;
+    userId: string;
     materials: Material[];
     onTotalCostChange: (cost: number) => void;
 }
@@ -20,8 +21,8 @@ type RecipeRow = {
     lineCost: number;
 };
 
-export const RecipeEditor = ({ menuId, materials, onTotalCostChange }: RecipeEditorProps) => {
-    const { recipes, addRecipe, updateRecipe, deleteRecipe } = useRecipes(menuId);
+export const RecipeEditor = ({ menuId, userId, materials, onTotalCostChange }: RecipeEditorProps) => {
+    const { recipes, addRecipe, updateRecipe, deleteRecipe } = useRecipes(menuId, userId);
     const [selectedMaterialId, setSelectedMaterialId] = useState('');
     const [usageDrafts, setUsageDrafts] = useState<Record<string, string>>({});
     const [activeUsageId, setActiveUsageId] = useState<string | null>(null);

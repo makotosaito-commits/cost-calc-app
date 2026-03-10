@@ -7,7 +7,19 @@ import { Button } from './ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
 import { Input } from './ui/Input';
 
-export const SettingsPage = () => {
+type SettingsPageProps = {
+    currentUserEmail?: string | null;
+    currentUserId?: string | null;
+    projectHost?: string | null;
+};
+
+const formatUserId = (userId?: string | null) => {
+    if (!userId) return '未ログイン';
+    if (userId.length <= 10) return userId;
+    return `${userId.slice(0, 8)}...${userId.slice(-4)}`;
+};
+
+export const SettingsPage = ({ currentUserEmail, currentUserId, projectHost }: SettingsPageProps) => {
     const { settings, updateSettings, resetSettings } = useCostRateSettings();
     const [targetDraft, setTargetDraft] = useState(String(settings.targetCostRate));
     const [warnDraft, setWarnDraft] = useState(String(settings.warnCostRate));
@@ -176,6 +188,11 @@ export const SettingsPage = () => {
                     <CardTitle className="text-lg">アカウント</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-3">
+                    <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground space-y-1">
+                        <p>ログインメール: <span className="font-medium text-foreground">{currentUserEmail ?? '未ログイン'}</span></p>
+                        <p>ユーザーID: <span className="font-mono text-foreground">{formatUserId(currentUserId)}</span></p>
+                        <p>接続先: <span className="font-mono text-foreground">{projectHost ?? '不明'}</span></p>
+                    </div>
                     <Button variant="outline" onClick={handleLogout} className="w-full sm:w-auto">
                         ログアウト
                     </Button>

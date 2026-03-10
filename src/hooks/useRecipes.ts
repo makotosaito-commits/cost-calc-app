@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Recipe } from '../types';
 
-export const useRecipes = (menuId?: string) => {
+export const useRecipes = (menuId?: string, userId?: string | null) => {
     const [recipes, setRecipes] = useState<Recipe[]>([]);
+    const refetchTimerRef = useRef<number | null>(null);
 
     const fetchRecipes = useCallback(async () => {
-        const { data: userData } = await supabase.auth.getUser();
-        const userId = userData.user?.id;
         if (!userId || !menuId) {
             setRecipes([]);
             return;
@@ -35,33 +34,69 @@ export const useRecipes = (menuId?: string) => {
             yield_rate: Number(row.yield_rate ?? 100),
         }));
         setRecipes(normalized);
-    }, [menuId]);
+    }, [menuId, userId]);
+
+    const scheduleRefetch = useCallback(() => {
+        if (refetchTimerRef.current) {
+            window.clearTimeout(refetchTimerRef.current);
+        }
+        refetchTimerRef.current = window.setTimeout(() => {
+            refetchTimerRef.current = null;
+            void fetchRecipes();
+        }, 120);
+    }, [fetchRecipes]);
 
     useEffect(() => {
         void fetchRecipes();
     }, [fetchRecipes]);
 
+    useEffect(() => {
+        if (!userId) return;
+
+        const channel = supabase
+            .channel(`recipes-sync-${userId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'recipes',
+                    filter: `user_id=eq.${userId}`,
+                },
+                () => {
+                    scheduleRefetch();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            if (refetchTimerRef.current) {
+                window.clearTimeout(refetchTimerRef.current);
+                refetchTimerRef.current = null;
+            }
+            void supabase.removeChannel(channel);
+        };
+    }, [scheduleRefetch, userId]);
+
     const addRecipe = useCallback(async (recipe: Omit<Recipe, 'id' | 'user_id'>) => {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) {
+        if (!userId) {
             throw new Error('ログイン状態を確認できません。');
         }
 
         const id = crypto.randomUUID();
         const { error } = await supabase.from('recipes').insert({
             ...recipe,
-            user_id: userData.user.id,
+            user_id: userId,
             id,
         });
         if (error) {
             throw new Error(error.message);
         }
         await fetchRecipes();
-    }, [fetchRecipes]);
+    }, [fetchRecipes, userId]);
 
     const updateRecipe = useCallback(async (id: string, changes: Partial<Recipe>) => {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) {
+        if (!userId) {
             throw new Error('ログイン状態を確認できません。');
         }
 
@@ -69,16 +104,15 @@ export const useRecipes = (menuId?: string) => {
             .from('recipes')
             .update(changes)
             .eq('id', id)
-            .eq('user_id', userData.user.id);
+            .eq('user_id', userId);
         if (error) {
             throw new Error(error.message);
         }
         await fetchRecipes();
-    }, [fetchRecipes]);
+    }, [fetchRecipes, userId]);
 
     const deleteRecipe = useCallback(async (id: string) => {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) {
+        if (!userId) {
             throw new Error('ログイン状態を確認できません。');
         }
 
@@ -86,12 +120,12 @@ export const useRecipes = (menuId?: string) => {
             .from('recipes')
             .delete()
             .eq('id', id)
-            .eq('user_id', userData.user.id);
+            .eq('user_id', userId);
         if (error) {
             throw new Error(error.message);
         }
         await fetchRecipes();
-    }, [fetchRecipes]);
+    }, [fetchRecipes, userId]);
 
     return {
         recipes,

@@ -8,7 +8,7 @@ import { LegalPage } from './components/LegalPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { db } from './lib/db';
-import { supabase } from './lib/supabase';
+import { supabase, supabaseProjectHost } from './lib/supabase';
 import { useMaterials } from './hooks/useMaterials';
 import { useMenus } from './hooks/useMenus';
 import { Material } from './types';
@@ -63,10 +63,19 @@ const MaterialsRoute = ({
     </Suspense>
 );
 
-const SettingsRoute = () => (
+type SettingsRouteProps = {
+    userEmail: string | null;
+    userId: string | null;
+};
+
+const SettingsRoute = ({ userEmail, userId }: SettingsRouteProps) => (
     <Suspense fallback={<RouteLoadingFallback />}>
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <SettingsPage />
+            <SettingsPage
+                currentUserEmail={userEmail}
+                currentUserId={userId}
+                projectHost={supabaseProjectHost}
+            />
         </div>
     </Suspense>
 );
@@ -77,8 +86,11 @@ function App() {
     const [authError, setAuthError] = useState<string | null>(null);
     const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
     const currentUserIdRef = useRef<string | null>(null);
-    const { materials, addMaterial, updateMaterial, deleteMaterial } = useMaterials();
-    const { menus, addMenu, updateMenu, deleteMenu } = useMenus();
+    const currentUserId = session?.user?.id ?? null;
+    const authenticatedUserId = session?.user?.id ?? '';
+    const currentUserEmail = session?.user?.email ?? null;
+    const { materials, addMaterial, updateMaterial, deleteMaterial } = useMaterials(currentUserId);
+    const { menus, addMenu, updateMenu, deleteMenu } = useMenus(currentUserId);
 
     useEffect(() => {
         let mounted = true;
@@ -167,6 +179,7 @@ function App() {
                         element={(
                             <MenuPage
                                 menus={menus}
+                                userId={authenticatedUserId}
                                 addMenu={addMenu}
                                 updateMenu={updateMenu}
                                 deleteMenu={deleteMenu}
@@ -189,7 +202,7 @@ function App() {
                     />
                     <Route
                         path="/settings"
-                        element={<SettingsRoute />}
+                        element={<SettingsRoute userEmail={currentUserEmail} userId={currentUserId} />}
                     />
                     <Route path="*" element={<Navigate to="/menu" replace />} />
                 </Route>
