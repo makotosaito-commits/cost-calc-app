@@ -132,7 +132,7 @@ export const useMaterials = () => {
         void fetchMaterials();
     }, [fetchMaterials]);
 
-    const addMaterial = async (material: Omit<Material, 'id'>) => {
+    const addMaterial = useCallback(async (material: Omit<Material, 'id'>) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
             throw new Error('ログイン状態を確認できません。');
@@ -179,9 +179,9 @@ export const useMaterials = () => {
             throw new Error(error.message);
         }
         await fetchMaterials();
-    };
+    }, [fetchMaterials]);
 
-    const updateMaterial = async (id: string, changes: Partial<Material>) => {
+    const updateMaterial = useCallback(async (id: string, changes: Partial<Material>) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
             throw new Error('ログイン状態を確認できません。');
@@ -251,9 +251,9 @@ export const useMaterials = () => {
             throw new Error(error.message);
         }
         await fetchMaterials();
-    };
+    }, [fetchMaterials]);
 
-    const deleteMaterial = async (id: string) => {
+    const deleteMaterial = useCallback(async (id: string) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
             throw new Error('ログイン状態を確認できません。');
@@ -272,7 +272,7 @@ export const useMaterials = () => {
         // menus/recipes は現段階で Dexie なので、ローカル整合性は維持する
         await db.recipes.where('material_id').equals(id).delete();
         await fetchMaterials();
-    };
+    }, [fetchMaterials]);
 
     return {
         materials,

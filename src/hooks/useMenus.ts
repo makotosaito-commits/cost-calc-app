@@ -42,7 +42,7 @@ export const useMenus = () => {
         void fetchMenus();
     }, [fetchMenus]);
 
-    const addMenu = async (menu: Omit<Menu, 'id' | 'user_id'>) => {
+    const addMenu = useCallback(async (menu: Omit<Menu, 'id' | 'user_id'>) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
             throw new Error('ログイン状態を確認できません。');
@@ -58,9 +58,9 @@ export const useMenus = () => {
             throw new Error(error.message);
         }
         await fetchMenus();
-    };
+    }, [fetchMenus]);
 
-    const updateMenu = async (id: string, changes: Partial<Menu>) => {
+    const updateMenu = useCallback(async (id: string, changes: Partial<Menu>) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
             throw new Error('ログイン状態を確認できません。');
@@ -75,9 +75,9 @@ export const useMenus = () => {
             throw new Error(error.message);
         }
         await fetchMenus();
-    };
+    }, [fetchMenus]);
 
-    const deleteMenu = async (id: string) => {
+    const deleteMenu = useCallback(async (id: string) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
             throw new Error('ログイン状態を確認できません。');
@@ -92,7 +92,7 @@ export const useMenus = () => {
             throw new Error(error.message);
         }
         await fetchMenus();
-    };
+    }, [fetchMenus]);
 
     return {
         menus,

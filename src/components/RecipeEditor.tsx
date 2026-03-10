@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRecipes } from '../hooks/useRecipes';
-import { useMaterials } from '../hooks/useMaterials';
 import { calculateLineCost, calculateUnitPriceWithYield, normalizeAmount, toSafeNumber } from '../lib/calculator';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -10,15 +9,23 @@ import { Material } from '../types';
 
 interface RecipeEditorProps {
     menuId: string;
+    materials: Material[];
     onTotalCostChange: (cost: number) => void;
 }
 
-export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) => {
+type RecipeRow = {
+    recipeId: string;
+    material: Material | undefined;
+    unitPrice: number;
+    lineCost: number;
+};
+
+export const RecipeEditor = ({ menuId, materials, onTotalCostChange }: RecipeEditorProps) => {
     const { recipes, addRecipe, updateRecipe, deleteRecipe } = useRecipes(menuId);
-    const { materials } = useMaterials();
     const [selectedMaterialId, setSelectedMaterialId] = useState('');
     const [usageDrafts, setUsageDrafts] = useState<Record<string, string>>({});
     const [activeUsageId, setActiveUsageId] = useState<string | null>(null);
+    const previousTotalCostRef = useRef<number | null>(null);
 
     const normalizeBaseUnit = (unit?: string) => {
         if (!unit) return 'g';
@@ -64,39 +71,59 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
         });
     }, [recipes, activeUsageId]);
 
+    const materialsById = useMemo(() => (
+        new Map(materials.map((material) => [material.id, material]))
+    ), [materials]);
+
     useEffect(() => {
         recipes.forEach((recipe) => {
-            const material = materials.find((m) => m.id === recipe.material_id);
+            const material = materialsById.get(recipe.material_id);
             if (!material) return;
             const fixedUnit = normalizeBaseUnit(material.base_unit);
             if (recipe.usage_unit !== fixedUnit) {
                 void updateRecipe(recipe.id, { usage_unit: fixedUnit });
             }
         });
-    }, [recipes, materials, updateRecipe]);
+    }, [materialsById, recipes, updateRecipe]);
 
-    useEffect(() => {
-        let total = 0;
-        recipes.forEach(recipe => {
-            const material = materials.find(m => m.id === recipe.material_id);
+    const recipeRows = useMemo<RecipeRow[]>(() => (
+        recipes.map((recipe) => {
+            const material = materialsById.get(recipe.material_id);
             const unitPrice = getMaterialUnitPrice(material);
             const usageAmount = activeUsageId === recipe.id
                 ? toSafeNumber(usageDrafts[recipe.id] ?? '0')
                 : toSafeNumber(recipe.usage_amount);
-            const cost = calculateLineCost(
+            const lineCost = calculateLineCost(
                 usageAmount,
                 recipe.usage_unit,
                 100,
                 unitPrice
             );
-            total += cost;
-        });
-        onTotalCostChange(total);
-    }, [recipes, materials, usageDrafts, activeUsageId, onTotalCostChange]);
+            return {
+                recipeId: recipe.id,
+                material,
+                unitPrice,
+                lineCost,
+            };
+        })
+    ), [activeUsageId, materialsById, recipes, usageDrafts]);
+
+    const totalCost = useMemo(() => (
+        recipeRows.reduce((sum, row) => sum + row.lineCost, 0)
+    ), [recipeRows]);
+
+    useEffect(() => {
+        const previous = previousTotalCostRef.current;
+        if (previous !== null && Math.abs(previous - totalCost) < 0.0001) {
+            return;
+        }
+        previousTotalCostRef.current = totalCost;
+        onTotalCostChange(totalCost);
+    }, [onTotalCostChange, totalCost]);
 
     const handleAddWithMaterial = async () => {
         if (!selectedMaterialId) return;
-        const material = materials.find(m => m.id === selectedMaterialId);
+        const material = materialsById.get(selectedMaterialId);
         if (!material) return;
 
         await addRecipe({
@@ -140,32 +167,22 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                     <p className="text-sm text-muted-foreground">レシピはまだありません。材料を追加してください。</p>
                 ) : (
                     <div className="divide-y divide-border">
-                        {recipes.map((recipe) => {
-                            const material = materials.find(m => m.id === recipe.material_id);
-                            const unitPrice = getMaterialUnitPrice(material);
-                            const usageAmount = activeUsageId === recipe.id
-                                ? toSafeNumber(usageDrafts[recipe.id] ?? '0')
-                                : toSafeNumber(recipe.usage_amount);
-                            const lineCost = calculateLineCost(
-                                usageAmount,
-                                recipe.usage_unit,
-                                100,
-                                unitPrice
-                            );
+                        {recipeRows.map((row) => {
+                            const material = row.material;
 
                             return (
-                                <div key={recipe.id} className="py-4">
+                                <div key={row.recipeId} className="py-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <p className="font-bold text-foreground">{material?.name || 'Unknown'}</p>
                                             <p className="text-[10px] text-muted-foreground">
-                                                単価: {Math.round(unitPrice).toLocaleString()} 円/{normalizeBaseUnit(material?.base_unit)}
+                                                単価: {Math.round(row.unitPrice).toLocaleString()} 円/{normalizeBaseUnit(material?.base_unit)}
                                             </p>
                                         </div>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => deleteRecipe(recipe.id)}
+                                            onClick={() => deleteRecipe(row.recipeId)}
                                             className="h-6 w-6 text-muted-foreground hover:text-foreground"
                                         >
                                             <TrashIcon className="h-3.5 w-3.5" />
@@ -181,10 +198,10 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                                     inputMode="numeric"
                                                     pattern="[0-9]*"
                                                     className="h-9 w-[96px] text-center bg-background border-border focus:border-foreground"
-                                                    value={usageDrafts[recipe.id] ?? ''}
-                                                    onFocus={() => setActiveUsageId(recipe.id)}
-                                                    onBlur={() => handleUsageBlur(recipe.id)}
-                                                    onChange={(e) => handleUsageChange(recipe.id, e.target.value)}
+                                                    value={usageDrafts[row.recipeId] ?? ''}
+                                                    onFocus={() => setActiveUsageId(row.recipeId)}
+                                                    onBlur={() => handleUsageBlur(row.recipeId)}
+                                                    onChange={(e) => handleUsageChange(row.recipeId, e.target.value)}
                                                 />
                                             </div>
                                             <div className="space-y-1">
@@ -198,7 +215,7 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                         <div className="text-right">
                                             <p className="text-[10px] text-muted-foreground">原価</p>
                                             <p className="text-lg font-black text-foreground tabular-nums">
-                                                {Math.round(lineCost).toLocaleString()}円
+                                                {Math.round(row.lineCost).toLocaleString()}円
                                             </p>
                                         </div>
                                     </div>
@@ -223,25 +240,15 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {recipes.map((recipe) => {
-                                    const material = materials.find(m => m.id === recipe.material_id);
-                                    const unitPrice = getMaterialUnitPrice(material);
-                                    const usageAmount = activeUsageId === recipe.id
-                                        ? toSafeNumber(usageDrafts[recipe.id] ?? '0')
-                                        : toSafeNumber(recipe.usage_amount);
-                                    const lineCost = calculateLineCost(
-                                        usageAmount,
-                                        recipe.usage_unit,
-                                        100,
-                                        unitPrice
-                                    );
+                                {recipeRows.map((row) => {
+                                    const material = row.material;
 
                                     return (
-                                        <TableRow key={recipe.id} className="group">
+                                        <TableRow key={row.recipeId} className="group">
                                             <TableCell className="font-bold py-4">
                                                 {material?.name || 'Unknown'}
                                                 <p className="text-[10px] text-muted-foreground font-normal">
-                                                    単価: {Math.round(unitPrice).toLocaleString()} 円/{normalizeBaseUnit(material?.base_unit)}
+                                                    単価: {Math.round(row.unitPrice).toLocaleString()} 円/{normalizeBaseUnit(material?.base_unit)}
                                                 </p>
                                             </TableCell>
                                             <TableCell>
@@ -250,20 +257,20 @@ export const RecipeEditor = ({ menuId, onTotalCostChange }: RecipeEditorProps) =
                                                     inputMode="numeric"
                                                     pattern="[0-9]*"
                                                     className="h-9 w-[100px] mx-auto text-center bg-background border-border focus:border-foreground"
-                                                    value={usageDrafts[recipe.id] ?? ''}
-                                                    onFocus={() => setActiveUsageId(recipe.id)}
-                                                    onBlur={() => handleUsageBlur(recipe.id)}
-                                                    onChange={(e) => handleUsageChange(recipe.id, e.target.value)}
+                                                    value={usageDrafts[row.recipeId] ?? ''}
+                                                    onFocus={() => setActiveUsageId(row.recipeId)}
+                                                    onBlur={() => handleUsageBlur(row.recipeId)}
+                                                    onChange={(e) => handleUsageChange(row.recipeId, e.target.value)}
                                                 />
                                             </TableCell>
                                             <TableCell className="text-center font-medium text-foreground">
                                                 {normalizeBaseUnit(material?.base_unit)}
                                             </TableCell>
                                             <TableCell className="text-right font-black text-foreground">
-                                                {Math.round(lineCost).toLocaleString()}
+                                                {Math.round(row.lineCost).toLocaleString()}
                                             </TableCell>
                                             <TableCell>
-                                                <Button variant="ghost" size="icon" onClick={() => deleteRecipe(recipe.id)} className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="icon" onClick={() => deleteRecipe(row.recipeId)} className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <TrashIcon className="h-4 w-4" />
                                                 </Button>
                                             </TableCell>

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBeforeUnload } from 'react-router-dom';
-import { useMenus } from '../hooks/useMenus';
 import { useCostRateSettings } from '../contexts/CostRateSettingsContext';
 import { useUnsavedChanges } from '../contexts/UnsavedChangesContext';
 import { MenuDetail } from './MenuDetail';
@@ -9,9 +8,17 @@ import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { calculateMenuMetrics, toSafeNumber } from '../lib/calculator';
 import { evaluateCostRate } from '../lib/costRateSettings';
+import { Material, Menu } from '../types';
 
-export const MenuPage = () => {
-    const { menus, addMenu, updateMenu, deleteMenu } = useMenus();
+type MenuPageProps = {
+    menus: Menu[];
+    addMenu: (menu: Omit<Menu, 'id' | 'user_id'>) => Promise<void>;
+    updateMenu: (id: string, changes: Partial<Menu>) => Promise<void>;
+    deleteMenu: (id: string) => Promise<void>;
+    materials: Material[];
+};
+
+export const MenuPage = ({ menus, addMenu, updateMenu, deleteMenu, materials }: MenuPageProps) => {
     const { settings } = useCostRateSettings();
     const { hasUnsavedMenuChanges, setHasUnsavedMenuChanges } = useUnsavedChanges();
     const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
@@ -79,6 +86,22 @@ export const MenuPage = () => {
             {toastMessage}
         </div>
     ) : null;
+
+    const handleTotalCostChange = useCallback((cost: number) => {
+        if (!selectedMenu) return;
+        const { totalCost, grossProfit, costRate } = calculateMenuMetrics(selectedMenu.sales_price, cost);
+        if (Math.abs(toSafeNumber(selectedMenu.total_cost) - totalCost) > 0.5) {
+            void updateMenu(selectedMenu.id, {
+                total_cost: totalCost,
+                gross_profit: grossProfit,
+                cost_rate: costRate
+            });
+        }
+    }, [selectedMenu, updateMenu]);
+
+    const handleManualUpdate = useCallback(async (id: string, changes: Parameters<typeof updateMenu>[1]) => {
+        await updateMenu(id, changes);
+    }, [updateMenu]);
 
     // Dashboard view
     if (!selectedMenu) {
@@ -167,21 +190,6 @@ export const MenuPage = () => {
         );
     }
 
-    const handleTotalCostChange = (cost: number) => {
-        const { totalCost, grossProfit, costRate } = calculateMenuMetrics(selectedMenu.sales_price, cost);
-        if (Math.abs(toSafeNumber(selectedMenu.total_cost) - totalCost) > 0.5) {
-            void updateMenu(selectedMenu.id, {
-                total_cost: totalCost,
-                gross_profit: grossProfit,
-                cost_rate: costRate
-            });
-        }
-    };
-
-    const handleManualUpdate = async (id: string, changes: Parameters<typeof updateMenu>[1]) => {
-        await updateMenu(id, changes);
-    };
-
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in">
             <div className="flex items-center justify-between border-b border-border pb-6">
@@ -223,6 +231,7 @@ export const MenuPage = () => {
                 <div className="space-y-6">
                     <RecipeEditor
                         menuId={selectedMenu.id}
+                        materials={materials}
                         onTotalCostChange={handleTotalCostChange}
                     />
                 </div>

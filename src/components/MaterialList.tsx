@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/Table';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -16,7 +16,16 @@ type MaterialListProps = {
 const ALL_CATEGORY = '__all__';
 const UNCATEGORIZED_CATEGORY = '__uncategorized__';
 
-export const MaterialList = ({ onEdit, materials, deleteMaterial }: MaterialListProps) => {
+type MaterialListRow = {
+    material: Material;
+    purchasePriceText: string;
+    purchaseDisplayText: string;
+    internalUnit: string;
+    unitPriceText: string;
+    categoryLabel: string;
+};
+
+export const MaterialList = memo(function MaterialList({ onEdit, materials, deleteMaterial }: MaterialListProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY);
 
@@ -74,6 +83,33 @@ export const MaterialList = ({ onEdit, materials, deleteMaterial }: MaterialList
             return matchesName && matchesCategory;
         });
     }, [materials, normalizedSearchTerm, selectedCategory]);
+
+    const listRows = useMemo<MaterialListRow[]>(() => (
+        filteredMaterials.map((material) => {
+            const purchaseDisplay = resolveDisplayValues(material);
+            const internalUnit = sanitizeBaseUnit(material.base_unit, (material as Material & { unit?: unknown }).unit);
+            const unitPrice = Math.round(
+                getUnitPrice(
+                    material.purchase_price,
+                    material.purchase_quantity,
+                    material.yield_rate,
+                    material.calculated_unit_price
+                )
+            ).toLocaleString();
+            const yieldSuffix = formatYieldRate(material.yield_rate);
+            const purchasePriceText = toSafeNumber(material.purchase_price).toLocaleString();
+            const purchaseDisplayText = `${toSafeNumber(purchaseDisplay.displayQuantity).toLocaleString()}${purchaseDisplay.displayUnit}${yieldSuffix}`;
+
+            return {
+                material,
+                purchasePriceText,
+                purchaseDisplayText,
+                internalUnit,
+                unitPriceText: unitPrice,
+                categoryLabel: material.category || '未分類',
+            };
+        })
+    ), [filteredMaterials]);
 
     const hasActiveFilters = normalizedSearchTerm !== '' || selectedCategory !== ALL_CATEGORY;
 
@@ -133,26 +169,25 @@ export const MaterialList = ({ onEdit, materials, deleteMaterial }: MaterialList
                 </Button>
             </div>
 
-            {filteredMaterials.length === 0 ? (
+            {listRows.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border bg-card/40 py-6 text-center text-sm text-muted-foreground">
                     該当する材料がありません
                 </div>
             ) : (
                 <>
                     <div className="md:hidden divide-y divide-border">
-                        {filteredMaterials.map((material) => {
-                            const purchaseDisplay = resolveDisplayValues(material);
-                            const internalUnit = sanitizeBaseUnit(material.base_unit, (material as Material & { unit?: unknown }).unit);
+                        {listRows.map((row) => {
+                            const material = row.material;
                             return (
                                 <div key={material.id} className="py-3 px-1 rounded-lg bg-card border border-border">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0 pr-2">
                                             <p className="font-bold text-foreground leading-tight break-words">{material.name}</p>
                                             <p className="mt-1 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                                                {toSafeNumber(material.purchase_price).toLocaleString()}円 / {toSafeNumber(purchaseDisplay.displayQuantity).toLocaleString()}{purchaseDisplay.displayUnit}{formatYieldRate(material.yield_rate)}
+                                                {row.purchasePriceText}円 / {row.purchaseDisplayText}
                                             </p>
                                             <p className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                                                単価 {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円/{internalUnit}
+                                                単価 {row.unitPriceText}円/{row.internalUnit}
                                             </p>
                                         </div>
                                         <Button
@@ -197,27 +232,26 @@ export const MaterialList = ({ onEdit, materials, deleteMaterial }: MaterialList
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredMaterials.map((material) => {
-                                        const purchaseDisplay = resolveDisplayValues(material);
-                                        const internalUnit = sanitizeBaseUnit(material.base_unit, (material as Material & { unit?: unknown }).unit);
+                                    {listRows.map((row) => {
+                                        const material = row.material;
                                         return (
                                             <TableRow key={material.id} className="border-border hover:bg-muted/50">
                                                 <TableCell className="font-bold text-foreground py-4">{material.name}</TableCell>
                                                 <TableCell>
                                                     <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium">
-                                                        {material.category || '未分類'}
+                                                        {row.categoryLabel}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="text-right font-mono text-xs">
-                                                    {toSafeNumber(material.purchase_price)}円 / {toSafeNumber(purchaseDisplay.displayQuantity).toLocaleString()}{purchaseDisplay.displayUnit}{formatYieldRate(material.yield_rate)}
+                                                    {row.purchasePriceText}円 / {row.purchaseDisplayText}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex flex-col items-end leading-tight">
                                                         <span className="text-lg font-black text-foreground tabular-nums">
-                                                            {Math.round(getUnitPrice(material.purchase_price, material.purchase_quantity, material.yield_rate, material.calculated_unit_price)).toLocaleString()}円
+                                                            {row.unitPriceText}円
                                                         </span>
                                                         <span className="text-[10px] text-muted-foreground font-bold tracking-wide">
-                                                            /{internalUnit}
+                                                            /{row.internalUnit}
                                                         </span>
                                                     </div>
                                                 </TableCell>
@@ -257,7 +291,7 @@ export const MaterialList = ({ onEdit, materials, deleteMaterial }: MaterialList
             )}
         </div>
     );
-};
+});
 
 const TrashIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>

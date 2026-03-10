@@ -41,7 +41,7 @@ export const useRecipes = (menuId?: string) => {
         void fetchRecipes();
     }, [fetchRecipes]);
 
-    const addRecipe = async (recipe: Omit<Recipe, 'id' | 'user_id'>) => {
+    const addRecipe = useCallback(async (recipe: Omit<Recipe, 'id' | 'user_id'>) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
             throw new Error('ログイン状態を確認できません。');
@@ -57,9 +57,9 @@ export const useRecipes = (menuId?: string) => {
             throw new Error(error.message);
         }
         await fetchRecipes();
-    };
+    }, [fetchRecipes]);
 
-    const updateRecipe = async (id: string, changes: Partial<Recipe>) => {
+    const updateRecipe = useCallback(async (id: string, changes: Partial<Recipe>) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
             throw new Error('ログイン状態を確認できません。');
@@ -74,9 +74,9 @@ export const useRecipes = (menuId?: string) => {
             throw new Error(error.message);
         }
         await fetchRecipes();
-    };
+    }, [fetchRecipes]);
 
-    const deleteRecipe = async (id: string) => {
+    const deleteRecipe = useCallback(async (id: string) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
             throw new Error('ログイン状態を確認できません。');
@@ -91,7 +91,7 @@ export const useRecipes = (menuId?: string) => {
             throw new Error(error.message);
         }
         await fetchRecipes();
-    };
+    }, [fetchRecipes]);
 
     return {
         recipes,
