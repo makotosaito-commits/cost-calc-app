@@ -57,6 +57,13 @@ export const RecipeEditor = ({ menuId, materials, onTotalCostChange }: RecipeEdi
         void updateRecipe(recipeId, { usage_amount: raw === '' ? 0 : toSafeNumber(raw) });
     };
 
+    const handleDeleteRecipe = (recipeId: string) => {
+        if (!window.confirm('この材料をレシピから削除しますか？')) {
+            return;
+        }
+        void deleteRecipe(recipeId);
+    };
+
     useEffect(() => {
         setUsageDrafts((prev) => {
             const next: Record<string, string> = {};
@@ -182,7 +189,7 @@ export const RecipeEditor = ({ menuId, materials, onTotalCostChange }: RecipeEdi
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => deleteRecipe(row.recipeId)}
+                                            onClick={() => handleDeleteRecipe(row.recipeId)}
                                             className="h-6 w-6 text-muted-foreground hover:text-foreground"
                                         >
                                             <TrashIcon className="h-3.5 w-3.5" />
@@ -270,7 +277,7 @@ export const RecipeEditor = ({ menuId, materials, onTotalCostChange }: RecipeEdi
                                                 {Math.round(row.lineCost).toLocaleString()}
                                             </TableCell>
                                             <TableCell>
-                                                <Button variant="ghost" size="icon" onClick={() => deleteRecipe(row.recipeId)} className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipe(row.recipeId)} className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <TrashIcon className="h-4 w-4" />
                                                 </Button>
                                             </TableCell>

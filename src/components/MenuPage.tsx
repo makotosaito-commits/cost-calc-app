@@ -205,7 +205,7 @@ export const MenuPage = ({ menus, addMenu, updateMenu, deleteMenu, materials }: 
                     ダッシュボードへ戻る
                 </Button>
                 <Button variant="destructive" size="sm" onClick={async () => {
-                    if (confirm('このメニューを削除しますか？\n削除すると元に戻せません。')) {
+                    if (confirm('このメニューを削除しますか？\nこの操作は元に戻せません。')) {
                         try {
                             await deleteMenu(selectedMenu.id);
                             setSelectedMenuId(null);
