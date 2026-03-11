@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRecipes } from '../hooks/useRecipes';
 import { calculateLineCost, calculateUnitPriceWithYield, normalizeAmount, toSafeNumber } from '../lib/calculator';
 import { Button } from './ui/Button';
@@ -27,6 +27,8 @@ export const RecipeEditor = ({ menuId, userId, materials, onTotalCostChange }: R
     const [usageDrafts, setUsageDrafts] = useState<Record<string, string>>({});
     const [activeUsageId, setActiveUsageId] = useState<string | null>(null);
     const previousTotalCostRef = useRef<number | null>(null);
+    const usageDraftsRef = useRef<Record<string, string>>({});
+    const usagePersistTimersRef = useRef<Record<string, number>>({});
 
     const normalizeBaseUnit = (unit?: string) => {
         if (!unit) return 'g';
@@ -47,23 +49,60 @@ export const RecipeEditor = ({ menuId, userId, materials, onTotalCostChange }: R
 
     const normalizeUsageInput = (raw: string) => raw.replace(/[^\d]/g, '');
 
+    const persistUsageDraft = useCallback((recipeId: string, raw: string) => {
+        const usageAmount = raw === '' ? 0 : toSafeNumber(raw);
+        void updateRecipe(recipeId, { usage_amount: usageAmount }).catch((error) => {
+            console.error(error);
+        });
+    }, [updateRecipe]);
+
+    const queueUsagePersist = useCallback((recipeId: string, raw: string) => {
+        const previousTimer = usagePersistTimersRef.current[recipeId];
+        if (previousTimer) {
+            window.clearTimeout(previousTimer);
+        }
+        usagePersistTimersRef.current[recipeId] = window.setTimeout(() => {
+            delete usagePersistTimersRef.current[recipeId];
+            persistUsageDraft(recipeId, raw);
+        }, 250);
+    }, [persistUsageDraft]);
+
     const handleUsageChange = (recipeId: string, raw: string) => {
         const normalized = normalizeUsageInput(raw);
         setUsageDrafts((prev) => ({ ...prev, [recipeId]: normalized }));
+        queueUsagePersist(recipeId, normalized);
     };
 
     const handleUsageBlur = (recipeId: string) => {
         setActiveUsageId((prev) => (prev === recipeId ? null : prev));
-        const raw = usageDrafts[recipeId] ?? '';
-        void updateRecipe(recipeId, { usage_amount: raw === '' ? 0 : toSafeNumber(raw) });
+        const pendingTimer = usagePersistTimersRef.current[recipeId];
+        if (!pendingTimer) return;
+        window.clearTimeout(pendingTimer);
+        delete usagePersistTimersRef.current[recipeId];
+        const latestRaw = usageDraftsRef.current[recipeId] ?? '';
+        persistUsageDraft(recipeId, latestRaw);
     };
 
     const handleDeleteRecipe = (recipeId: string) => {
         if (!window.confirm('この材料をレシピから削除しますか？')) {
             return;
         }
+        const pendingTimer = usagePersistTimersRef.current[recipeId];
+        if (pendingTimer) {
+            window.clearTimeout(pendingTimer);
+            delete usagePersistTimersRef.current[recipeId];
+        }
         void deleteRecipe(recipeId);
     };
+
+    useEffect(() => {
+        usageDraftsRef.current = usageDrafts;
+    }, [usageDrafts]);
+
+    useEffect(() => () => {
+        Object.values(usagePersistTimersRef.current).forEach((timerId) => window.clearTimeout(timerId));
+        usagePersistTimersRef.current = {};
+    }, []);
 
     useEffect(() => {
         setUsageDrafts((prev) => {
@@ -98,9 +137,7 @@ export const RecipeEditor = ({ menuId, userId, materials, onTotalCostChange }: R
         recipes.map((recipe) => {
             const material = materialsById.get(recipe.material_id);
             const unitPrice = getMaterialUnitPrice(material);
-            const usageAmount = activeUsageId === recipe.id
-                ? toSafeNumber(usageDrafts[recipe.id] ?? '0')
-                : toSafeNumber(recipe.usage_amount);
+            const usageAmount = toSafeNumber(usageDrafts[recipe.id] ?? String(recipe.usage_amount));
             const lineCost = calculateLineCost(
                 usageAmount,
                 recipe.usage_unit,
@@ -114,7 +151,7 @@ export const RecipeEditor = ({ menuId, userId, materials, onTotalCostChange }: R
                 lineCost,
             };
         })
-    ), [activeUsageId, materialsById, recipes, usageDrafts]);
+    ), [materialsById, recipes, usageDrafts]);
 
     const totalCost = useMemo(() => (
         recipeRows.reduce((sum, row) => sum + row.lineCost, 0)

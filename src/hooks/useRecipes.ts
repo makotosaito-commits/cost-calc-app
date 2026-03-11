@@ -84,21 +84,38 @@ export const useRecipes = (menuId?: string, userId?: string | null) => {
         }
 
         const id = crypto.randomUUID();
+        const optimisticRecipe: Recipe = {
+            id,
+            user_id: userId,
+            menu_id: String(recipe.menu_id ?? ''),
+            material_id: String(recipe.material_id ?? ''),
+            usage_amount: Number(recipe.usage_amount ?? 0),
+            usage_unit: String(recipe.usage_unit ?? 'g'),
+            yield_rate: Number(recipe.yield_rate ?? 100),
+        };
+        setRecipes((prev) => [...prev, optimisticRecipe]);
+
         const { error } = await supabase.from('recipes').insert({
             ...recipe,
             user_id: userId,
             id,
         });
         if (error) {
+            setRecipes((prev) => prev.filter((item) => item.id !== id));
             throw new Error(error.message);
         }
-        await fetchRecipes();
-    }, [fetchRecipes, userId]);
+    }, [userId]);
 
     const updateRecipe = useCallback(async (id: string, changes: Partial<Recipe>) => {
         if (!userId) {
             throw new Error('ログイン状態を確認できません。');
         }
+
+        const previousRecipe = recipes.find((recipe) => recipe.id === id);
+        setRecipes((prev) => prev.map((recipe) => {
+            if (recipe.id !== id) return recipe;
+            return { ...recipe, ...changes };
+        }));
 
         const { error } = await supabase
             .from('recipes')
@@ -106,15 +123,23 @@ export const useRecipes = (menuId?: string, userId?: string | null) => {
             .eq('id', id)
             .eq('user_id', userId);
         if (error) {
+            if (previousRecipe) {
+                setRecipes((prev) => prev.map((recipe) => recipe.id === id ? previousRecipe as Recipe : recipe));
+            } else {
+                await fetchRecipes();
+            }
             throw new Error(error.message);
         }
-        await fetchRecipes();
-    }, [fetchRecipes, userId]);
+    }, [fetchRecipes, recipes, userId]);
 
     const deleteRecipe = useCallback(async (id: string) => {
         if (!userId) {
             throw new Error('ログイン状態を確認できません。');
         }
+
+        const removedIndex = recipes.findIndex((recipe) => recipe.id === id);
+        const removedRecipe = removedIndex >= 0 ? recipes[removedIndex] : undefined;
+        setRecipes((prev) => prev.filter((recipe) => recipe.id !== id));
 
         const { error } = await supabase
             .from('recipes')
@@ -122,10 +147,18 @@ export const useRecipes = (menuId?: string, userId?: string | null) => {
             .eq('id', id)
             .eq('user_id', userId);
         if (error) {
+            if (removedRecipe && removedIndex >= 0) {
+                setRecipes((prev) => {
+                    const next = [...prev];
+                    next.splice(Math.min(removedIndex, next.length), 0, removedRecipe as Recipe);
+                    return next;
+                });
+            } else {
+                await fetchRecipes();
+            }
             throw new Error(error.message);
         }
-        await fetchRecipes();
-    }, [fetchRecipes, userId]);
+    }, [fetchRecipes, recipes, userId]);
 
     return {
         recipes,

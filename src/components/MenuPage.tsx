@@ -23,9 +23,12 @@ export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, mater
     const { settings } = useCostRateSettings();
     const { hasUnsavedMenuChanges, setHasUnsavedMenuChanges } = useUnsavedChanges();
     const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
+    const [liveTotalCost, setLiveTotalCost] = useState<number | null>(null);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const selectedMenu = selectedMenuId ? menus.find(m => m.id === selectedMenuId) : null;
     const toastTimerRef = useRef<number | null>(null);
+    const menuCostPersistTimerRef = useRef<number | null>(null);
+    const lastPersistedTotalCostRef = useRef<Record<string, number>>({});
 
     const showToast = useCallback((message: string) => {
         setToastMessage(message);
@@ -42,7 +45,24 @@ export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, mater
         if (toastTimerRef.current) {
             window.clearTimeout(toastTimerRef.current);
         }
+        if (menuCostPersistTimerRef.current) {
+            window.clearTimeout(menuCostPersistTimerRef.current);
+        }
     }, []);
+
+    useEffect(() => {
+        if (menuCostPersistTimerRef.current) {
+            window.clearTimeout(menuCostPersistTimerRef.current);
+            menuCostPersistTimerRef.current = null;
+        }
+        if (!selectedMenu) {
+            setLiveTotalCost(null);
+            return;
+        }
+        const initialTotalCost = toSafeNumber(selectedMenu.total_cost);
+        setLiveTotalCost(initialTotalCost);
+        lastPersistedTotalCostRef.current[selectedMenu.id] = initialTotalCost;
+    }, [selectedMenuId]);
 
     useEffect(() => {
         if (!selectedMenuId) {
@@ -90,14 +110,32 @@ export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, mater
 
     const handleTotalCostChange = useCallback((cost: number) => {
         if (!selectedMenu) return;
-        const { totalCost, grossProfit, costRate } = calculateMenuMetrics(selectedMenu.sales_price, cost);
-        if (Math.abs(toSafeNumber(selectedMenu.total_cost) - totalCost) > 0.5) {
-            void updateMenu(selectedMenu.id, {
+        const normalizedCost = toSafeNumber(cost);
+        setLiveTotalCost(normalizedCost);
+
+        if (menuCostPersistTimerRef.current) {
+            window.clearTimeout(menuCostPersistTimerRef.current);
+        }
+
+        const menuId = selectedMenu.id;
+        const salesPrice = selectedMenu.sales_price;
+        menuCostPersistTimerRef.current = window.setTimeout(() => {
+            menuCostPersistTimerRef.current = null;
+            const { totalCost, grossProfit, costRate } = calculateMenuMetrics(salesPrice, normalizedCost);
+            const lastPersisted = lastPersistedTotalCostRef.current[menuId];
+            if (lastPersisted !== undefined && Math.abs(lastPersisted - totalCost) <= 0.5) {
+                return;
+            }
+            lastPersistedTotalCostRef.current[menuId] = totalCost;
+            void updateMenu(menuId, {
                 total_cost: totalCost,
                 gross_profit: grossProfit,
                 cost_rate: costRate
+            }).catch((error) => {
+                console.error(error);
+                delete lastPersistedTotalCostRef.current[menuId];
             });
-        }
+        }, 250);
     }, [selectedMenu, updateMenu]);
 
     const handleManualUpdate = useCallback(async (id: string, changes: Parameters<typeof updateMenu>[1]) => {
@@ -224,7 +262,7 @@ export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, mater
                     <MenuDetail
                         menu={selectedMenu}
                         onUpdate={handleManualUpdate}
-                        calculatedTotalCost={selectedMenu.total_cost}
+                        calculatedTotalCost={liveTotalCost ?? toSafeNumber(selectedMenu.total_cost)}
                         onDirtyChange={setHasUnsavedMenuChanges}
                         onManualUpdateSuccess={() => showToast('メニューを更新しました')}
                     />
