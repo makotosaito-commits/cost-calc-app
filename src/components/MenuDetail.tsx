@@ -116,11 +116,11 @@ export const MenuDetail = ({
         <div className="space-y-4 md:space-y-2">
             <Card className="bg-card border-border shadow-sm overflow-visible">
                 <CardContent className="p-6 md:p-3">
-                    <div className="space-y-6 md:space-y-3">
+                    <div className="space-y-6 md:space-y-2">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">概要</p>
                         <div className="flex justify-center md:block">
                             <div
-                                className="relative w-full aspect-video md:aspect-auto md:h-32 bg-muted rounded-xl border border-dashed border-border flex items-center justify-center overflow-hidden cursor-pointer hover:border-zinc-400 transition-colors group"
+                                className="relative w-full aspect-video md:aspect-auto md:h-36 bg-muted rounded-xl border border-dashed border-border flex items-center justify-center overflow-hidden cursor-pointer hover:border-zinc-400 transition-colors group"
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 {image ? (
@@ -146,7 +146,7 @@ export const MenuDetail = ({
                             />
                         </div>
 
-                        <div className="mt-3 space-y-4 md:mt-1 md:space-y-2">
+                        <div className="mt-3 space-y-4 md:mt-0.5 md:space-y-2">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">メニュー名</label>
                                 <Input
