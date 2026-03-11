@@ -192,7 +192,7 @@ export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, mater
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 animate-in md:flex md:h-[calc(100dvh-10rem)] md:flex-col md:space-y-0 md:overflow-hidden">
+        <div className="max-w-6xl mx-auto space-y-8 animate-in md:flex md:h-[calc(100dvh-9.5rem)] md:flex-col md:space-y-0 md:overflow-hidden">
             <div className="flex items-center justify-between border-b border-border pb-4 md:pb-3 md:mb-3 md:shrink-0">
                 <Button
                     variant="ghost"
@@ -229,7 +229,7 @@ export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, mater
                         onManualUpdateSuccess={() => showToast('メニューを更新しました')}
                     />
                 </div>
-                <div className="space-y-6 md:h-full md:min-h-0 md:overflow-y-auto md:pr-1">
+                <div className="space-y-6 md:h-full md:min-h-0 md:overflow-y-auto md:pr-1 md:pb-1">
                     <RecipeEditor
                         menuId={selectedMenu.id}
                         userId={userId}
