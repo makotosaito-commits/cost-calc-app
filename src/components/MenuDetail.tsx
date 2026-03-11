@@ -113,21 +113,21 @@ export const MenuDetail = ({
     const rateLabel = evaluated.label ?? '未入力';
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 md:space-y-3">
             <Card className="bg-card border-border shadow-sm overflow-visible">
-                <CardContent className="p-6">
-                    <div className="space-y-6">
+                <CardContent className="p-6 md:p-4">
+                    <div className="space-y-6 md:space-y-4">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">概要</p>
                         <div className="flex justify-center md:block">
                             <div
-                                className="relative w-full aspect-video bg-muted rounded-xl border border-dashed border-border flex items-center justify-center overflow-hidden cursor-pointer hover:border-zinc-400 transition-colors group"
+                                className="relative w-full aspect-video md:aspect-auto md:h-40 bg-muted rounded-xl border border-dashed border-border flex items-center justify-center overflow-hidden cursor-pointer hover:border-zinc-400 transition-colors group"
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 {image ? (
                                     <img src={image} alt="Menu" className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="text-center text-muted-foreground transition-colors">
-                                        <PhotoIcon className="h-10 w-10 mx-auto mb-2" />
+                                        <PhotoIcon className="h-10 w-10 md:h-8 md:w-8 mx-auto mb-2" />
                                         <span className="text-xs font-bold uppercase tracking-wider">写真を追加</span>
                                     </div>
                                 )}
@@ -146,7 +146,7 @@ export const MenuDetail = ({
                             />
                         </div>
 
-                        <div className="mt-3 space-y-4">
+                        <div className="mt-3 space-y-4 md:mt-2 md:space-y-3">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">メニュー名</label>
                                 <Input
@@ -160,7 +160,7 @@ export const MenuDetail = ({
                                         }
                                     }}
                                     placeholder="例: 牛すじ煮込み"
-                                    className="text-lg font-semibold bg-transparent border-t-0 border-l-0 border-r-0 border-b border-border rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all px-1"
+                                    className="text-lg md:text-base font-semibold bg-transparent border-t-0 border-l-0 border-r-0 border-b border-border rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all px-1"
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -183,7 +183,7 @@ export const MenuDetail = ({
                                             }
                                         }}
                                         placeholder="例: 850"
-                                        className="text-xl font-semibold bg-transparent border-t-0 border-l-0 border-r-0 border-b border-border rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all pl-5 pr-1"
+                                        className="text-xl md:text-lg font-semibold bg-transparent border-t-0 border-l-0 border-r-0 border-b border-border rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all pl-5 pr-1"
                                     />
                                 </div>
                             </div>
@@ -193,36 +193,36 @@ export const MenuDetail = ({
             </Card>
 
             <Card className="bg-card border-border shadow-sm">
-                <CardContent className="p-6 space-y-4">
+                <CardContent className="p-6 md:p-4 space-y-4 md:space-y-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">結果</p>
-                    <div className={`rounded-xl border p-4 ${rateToneClass}`}>
+                    <div className={`rounded-xl border p-4 md:p-3 ${rateToneClass}`}>
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価率</p>
-                                <p className="mt-1 text-4xl font-black leading-none tabular-nums">
+                                <p className="mt-1 text-4xl md:text-3xl font-black leading-none tabular-nums">
                                     {evaluated.displayRate ?? '—'}
-                                    <span className="ml-1 text-lg font-bold">%</span>
+                                    <span className="ml-1 text-lg md:text-base font-bold">%</span>
                                 </p>
                             </div>
-                            <span className="text-[11px] font-medium tracking-wide rounded-full px-2 py-1 border border-current/30 bg-background/50">
+                            <span className="text-[11px] md:text-[10px] font-medium tracking-wide rounded-full px-2 py-1 md:px-1.5 md:py-0.5 border border-current/30 bg-background/50">
                                 {rateLabel}
                             </span>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-muted/40 rounded-xl p-4 border border-border">
+                    <div className="grid grid-cols-2 gap-3 md:gap-2">
+                        <div className="bg-muted/40 rounded-xl p-4 md:p-3 border border-border">
                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">粗利益</p>
-                            <p className={`text-xl font-semibold tabular-nums ${hasSalesPrice ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            <p className={`text-xl md:text-lg font-semibold tabular-nums ${hasSalesPrice ? 'text-foreground' : 'text-muted-foreground'}`}>
                                 {safeGrossProfit !== null ? safeGrossProfit.toLocaleString() : '—'} <span className="text-xs font-normal">円</span>
                             </p>
                         </div>
-                        <div className="bg-muted/40 rounded-xl p-4 border border-border flex items-center justify-between">
+                        <div className="bg-muted/40 rounded-xl p-4 md:p-3 border border-border flex items-center justify-between">
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">原価合計</p>
-                                <p className="text-xl font-black text-foreground tabular-nums">{safeTotalCost !== null ? safeTotalCost.toLocaleString() : '—'} <span className="text-xs font-normal">円</span></p>
+                                <p className="text-xl md:text-lg font-black text-foreground tabular-nums">{safeTotalCost !== null ? safeTotalCost.toLocaleString() : '—'} <span className="text-xs font-normal">円</span></p>
                             </div>
-                            <div className="h-9 w-9 flex items-center justify-center bg-background border border-border rounded-lg text-muted-foreground">
+                            <div className="h-9 w-9 md:h-8 md:w-8 flex items-center justify-center bg-background border border-border rounded-lg text-muted-foreground">
                                 <ReceiptIcon />
                             </div>
                         </div>

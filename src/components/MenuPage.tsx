@@ -192,8 +192,8 @@ export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, mater
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 animate-in md:flex md:h-[calc(100dvh-11rem)] md:flex-col md:space-y-0 md:overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border pb-6 md:mb-6 md:shrink-0">
+        <div className="max-w-6xl mx-auto space-y-8 animate-in md:flex md:h-[calc(100dvh-10.5rem)] md:flex-col md:space-y-0 md:overflow-hidden">
+            <div className="flex items-center justify-between border-b border-border pb-4 md:mb-4 md:shrink-0">
                 <Button
                     variant="ghost"
                     onClick={() => {
@@ -219,8 +219,8 @@ export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, mater
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-[360px_minmax(0,1fr)] gap-6 items-start md:flex-1 md:min-h-0 md:overflow-hidden">
-                <div className="md:sticky md:top-0 md:h-full md:max-h-full md:overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] gap-6 items-start md:flex-1 md:min-h-0 md:overflow-hidden">
+                <div className="md:sticky md:top-0 md:h-full md:max-h-full md:overflow-hidden">
                     <MenuDetail
                         menu={selectedMenu}
                         onUpdate={handleManualUpdate}
