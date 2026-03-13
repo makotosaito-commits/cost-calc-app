@@ -18,6 +18,13 @@ type BasicMaterialSeed = {
     yield_rate: number;
 };
 
+type RebuildResult = {
+    insertedCount: number;
+    totalCount: number;
+    missingYieldCount: number;
+    completedAt: string;
+};
+
 const BASIC_MATERIAL_SEEDS: BasicMaterialSeed[] = [
     { name: '玉ねぎ', category: '野菜', unit: 'g', yield_rate: 90 },
     { name: 'にんじん', category: '野菜', unit: 'g', yield_rate: 88 },
@@ -229,6 +236,9 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
     const [dangerDraft, setDangerDraft] = useState(String(settings.dangerCostRate));
     const [isSeedConfirmOpen, setIsSeedConfirmOpen] = useState(false);
     const [isSeedingMaterials, setIsSeedingMaterials] = useState(false);
+    const [isRebuildConfirmOpen, setIsRebuildConfirmOpen] = useState(false);
+    const [isRebuildingMaterials, setIsRebuildingMaterials] = useState(false);
+    const [rebuildResult, setRebuildResult] = useState<RebuildResult | null>(null);
 
     useEffect(() => {
         setTargetDraft(String(settings.targetCostRate));
@@ -274,42 +284,6 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
         setDangerDraft(String(DEFAULT_COST_RATE_SETTINGS.dangerCostRate));
     };
 
-    const handleReset = async () => {
-        if (confirm('本当にすべてのデータを削除しますか？この操作は取り消せません。')) {
-            const { data: userData, error: userError } = await supabase.auth.getUser();
-            if (userError || !userData.user) {
-                alert('ログイン状態を確認できません。');
-                return;
-            }
-
-            const userId = userData.user.id;
-            const recipeRes = await supabase.from('recipes').delete().eq('user_id', userId);
-            if (recipeRes.error) {
-                alert(`レシピ削除に失敗: ${recipeRes.error.message}`);
-                return;
-            }
-
-            const menuRes = await supabase.from('menus').delete().eq('user_id', userId);
-            if (menuRes.error) {
-                alert(`メニュー削除に失敗: ${menuRes.error.message}`);
-                return;
-            }
-
-            const materialRes = await supabase.from('materials').delete().eq('user_id', userId);
-            if (materialRes.error) {
-                alert(`材料削除に失敗: ${materialRes.error.message}`);
-                return;
-            }
-
-            await db.transaction('rw', db.materials, db.menus, db.recipes, async () => {
-                await db.materials.clear();
-                await db.menus.clear();
-                await db.recipes.clear();
-            });
-            alert('データを初期化しました。');
-        }
-    };
-
     const hasMissingColumn = (errorMessage: string, columns: string[]) => {
         const normalized = errorMessage.toLowerCase();
         return columns.some((column) => normalized.includes(column.toLowerCase()));
@@ -322,18 +296,140 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
             || (normalized.includes('violates not-null constraint') && normalized.includes('base_unit'));
     };
 
+    const getCurrentUserId = async () => {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) {
+            throw new Error('ログイン状態を確認できません。');
+        }
+        return userData.user.id;
+    };
+
+    const resetUserData = async (userId: string) => {
+        const recipeRes = await supabase.from('recipes').delete().eq('user_id', userId);
+        if (recipeRes.error) {
+            throw new Error(`レシピ削除に失敗: ${recipeRes.error.message}`);
+        }
+
+        const menuRes = await supabase.from('menus').delete().eq('user_id', userId);
+        if (menuRes.error) {
+            throw new Error(`メニュー削除に失敗: ${menuRes.error.message}`);
+        }
+
+        const materialRes = await supabase.from('materials').delete().eq('user_id', userId);
+        if (materialRes.error) {
+            throw new Error(`材料削除に失敗: ${materialRes.error.message}`);
+        }
+
+        await db.transaction('rw', db.materials, db.menus, db.recipes, async () => {
+            await db.materials.clear();
+            await db.menus.clear();
+            await db.recipes.clear();
+        });
+    };
+
+    const createSeedPayload = (
+        userId: string,
+        seeds: BasicMaterialSeed[],
+        mode: 'unit' | 'unit_with_base' | 'base',
+        includeYieldRate: boolean
+    ) => (
+        seeds.map((seed) => {
+            const row: Record<string, unknown> = {
+                id: crypto.randomUUID(),
+                user_id: userId,
+                name: seed.name,
+                category: seed.category,
+            };
+
+            if (mode === 'unit' || mode === 'unit_with_base') {
+                row.unit = seed.unit;
+            }
+            if (mode === 'base' || mode === 'unit_with_base') {
+                row.base_unit = seed.unit;
+            }
+            if (includeYieldRate) {
+                row.yield_rate = seed.yield_rate;
+            }
+
+            return row;
+        })
+    );
+
+    const insertBasicMaterials = async (userId: string, seeds: BasicMaterialSeed[]) => {
+        const insertAttempts: Array<{ mode: 'unit' | 'unit_with_base' | 'base'; includeYieldRate: boolean }> = [
+            { mode: 'unit', includeYieldRate: true },
+            { mode: 'unit_with_base', includeYieldRate: true },
+            { mode: 'base', includeYieldRate: true },
+            { mode: 'unit', includeYieldRate: false },
+            { mode: 'unit_with_base', includeYieldRate: false },
+            { mode: 'base', includeYieldRate: false },
+        ];
+
+        let insertError: string | null = null;
+        for (const attempt of insertAttempts) {
+            const payload = createSeedPayload(userId, seeds, attempt.mode, attempt.includeYieldRate);
+            const { error } = await supabase.from('materials').insert(payload);
+            if (!error) {
+                insertError = null;
+                break;
+            }
+            insertError = error.message;
+            if (!canRetryWithFallback(error.message)) {
+                break;
+            }
+        }
+
+        if (insertError) {
+            throw new Error(`基本の材料追加に失敗しました: ${insertError}`);
+        }
+    };
+
+    const countMaterialsByUser = async (userId: string) => {
+        const { count, error } = await supabase
+            .from('materials')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId);
+
+        if (error) {
+            throw new Error(`材料件数の取得に失敗しました: ${error.message}`);
+        }
+        return count ?? 0;
+    };
+
+    const countMissingYieldRate = async (userId: string) => {
+        const { count, error } = await supabase
+            .from('materials')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .is('yield_rate', null);
+
+        if (error) {
+            throw new Error(`歩留まり未設定件数の取得に失敗しました: ${error.message}`);
+        }
+        return count ?? 0;
+    };
+
+    const handleReset = async () => {
+        if (!confirm('本当にすべてのデータを削除しますか？この操作は取り消せません。')) {
+            return;
+        }
+
+        try {
+            const userId = await getCurrentUserId();
+            await resetUserData(userId);
+            setRebuildResult(null);
+            alert('データを初期化しました。');
+        } catch (error) {
+            alert(error instanceof Error ? error.message : 'データ初期化に失敗しました。');
+        }
+    };
+
     const handleSeedBasicMaterials = async () => {
         if (isSeedingMaterials) return;
         setIsSeedingMaterials(true);
 
         try {
-            const { data: userData, error: userError } = await supabase.auth.getUser();
-            if (userError || !userData.user) {
-                alert('ログイン状態を確認できません。');
-                return;
-            }
-
-            const userId = userData.user.id;
+            const userId = await getCurrentUserId();
             const { data: existingMaterials, error: existingError } = await supabase
                 .from('materials')
                 .select('name')
@@ -365,61 +461,50 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                 setIsSeedConfirmOpen(false);
                 return;
             }
-
-            const createPayload = (mode: 'unit' | 'unit_with_base' | 'base', includeYieldRate: boolean) => (
-                materialsToInsert.map((seed) => {
-                    const row: Record<string, unknown> = {
-                        id: crypto.randomUUID(),
-                        user_id: userId,
-                        name: seed.name,
-                        category: seed.category,
-                    };
-
-                    if (mode === 'unit' || mode === 'unit_with_base') {
-                        row.unit = seed.unit;
-                    }
-                    if (mode === 'base' || mode === 'unit_with_base') {
-                        row.base_unit = seed.unit;
-                    }
-                    if (includeYieldRate) {
-                        row.yield_rate = seed.yield_rate;
-                    }
-
-                    return row;
-                })
-            );
-
-            const insertAttempts: Array<{ mode: 'unit' | 'unit_with_base' | 'base'; includeYieldRate: boolean }> = [
-                { mode: 'unit', includeYieldRate: true },
-                { mode: 'unit_with_base', includeYieldRate: true },
-                { mode: 'base', includeYieldRate: true },
-                { mode: 'unit', includeYieldRate: false },
-                { mode: 'unit_with_base', includeYieldRate: false },
-                { mode: 'base', includeYieldRate: false },
-            ];
-
-            let insertError: string | null = null;
-            for (const attempt of insertAttempts) {
-                const { error } = await supabase.from('materials').insert(createPayload(attempt.mode, attempt.includeYieldRate));
-                if (!error) {
-                    insertError = null;
-                    break;
-                }
-                insertError = error.message;
-                if (!canRetryWithFallback(error.message)) {
-                    break;
-                }
-            }
-
-            if (insertError) {
-                alert(`基本の材料追加に失敗しました: ${insertError}`);
-                return;
-            }
+            await insertBasicMaterials(userId, materialsToInsert);
 
             setIsSeedConfirmOpen(false);
             alert(`基本の材料を${materialsToInsert.length}件追加しました`);
+        } catch (error) {
+            alert(error instanceof Error ? error.message : '基本の材料追加に失敗しました。');
         } finally {
             setIsSeedingMaterials(false);
+        }
+    };
+
+    const handleRebuildBasicMaterials = async () => {
+        if (isRebuildingMaterials) return;
+        setIsRebuildingMaterials(true);
+
+        try {
+            const userId = await getCurrentUserId();
+
+            await resetUserData(userId);
+            await insertBasicMaterials(userId, BASIC_MATERIAL_SEEDS);
+
+            const [totalCount, missingYieldCount] = await Promise.all([
+                countMaterialsByUser(userId),
+                countMissingYieldRate(userId),
+            ]);
+
+            const result: RebuildResult = {
+                insertedCount: BASIC_MATERIAL_TOTAL,
+                totalCount,
+                missingYieldCount,
+                completedAt: new Date().toLocaleString('ja-JP'),
+            };
+            setRebuildResult(result);
+            setIsRebuildConfirmOpen(false);
+
+            if (missingYieldCount === 0) {
+                alert(`再構築が完了しました。${totalCount}件中、歩留まり未設定は0件です。`);
+            } else {
+                alert(`再構築は完了しましたが、歩留まり未設定が${missingYieldCount}件あります。設定画面の結果を確認してください。`);
+            }
+        } catch (error) {
+            alert(error instanceof Error ? error.message : '再構築に失敗しました。');
+        } finally {
+            setIsRebuildingMaterials(false);
         }
     };
 
@@ -495,7 +580,12 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                         <br />
                         <span className="text-red-500/80 font-bold block mt-2 underline decoration-red-500/30">※ この操作は元に戻すことができません。</span>
                     </p>
-                    <Button variant="destructive" onClick={handleReset} className="w-full sm:w-auto font-bold uppercase tracking-wider px-8">
+                    <Button
+                        variant="destructive"
+                        onClick={handleReset}
+                        className="w-full sm:w-auto font-bold uppercase tracking-wider px-8"
+                        disabled={isSeedingMaterials || isRebuildingMaterials}
+                    >
                         すべてのデータをリセット
                     </Button>
 
@@ -508,11 +598,37 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                             variant="outline"
                             onClick={() => setIsSeedConfirmOpen(true)}
                             className="mt-4 w-full sm:w-auto font-bold tracking-wider px-8"
-                            disabled={isSeedingMaterials}
+                            disabled={isSeedingMaterials || isRebuildingMaterials}
                         >
                             材料を追加する
                         </Button>
                     </div>
+
+                    <div className="mt-6 border-t border-border pt-6">
+                        <h3 className="text-base font-semibold text-foreground">基本材料を再構築（リセット＋200件再投入）</h3>
+                        <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                            テストデータを想定し、現在の材料・メニュー・レシピを削除後、基本材料200件を再投入します。
+                            再投入後に歩留まり未設定件数を自動検証します。
+                        </p>
+                        <Button
+                            variant="destructive"
+                            onClick={() => setIsRebuildConfirmOpen(true)}
+                            className="mt-4 w-full sm:w-auto font-bold tracking-wider px-8"
+                            disabled={isSeedingMaterials || isRebuildingMaterials}
+                        >
+                            {isRebuildingMaterials ? '再構築中...' : '再構築を実行する'}
+                        </Button>
+                    </div>
+
+                    {rebuildResult && (
+                        <div className="mt-6 rounded-xl border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground space-y-1.5">
+                            <p className="font-semibold text-foreground">再構築結果</p>
+                            <p>投入件数: <span className="font-medium text-foreground">{rebuildResult.insertedCount}件</span></p>
+                            <p>登録済み材料: <span className="font-medium text-foreground">{rebuildResult.totalCount}件</span></p>
+                            <p>歩留まり未設定: <span className={`font-medium ${rebuildResult.missingYieldCount === 0 ? 'text-foreground' : 'text-destructive'}`}>{rebuildResult.missingYieldCount}件</span></p>
+                            <p>完了時刻: <span className="font-medium text-foreground">{rebuildResult.completedAt}</span></p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -574,6 +690,35 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                                 disabled={isSeedingMaterials}
                             >
                                 {isSeedingMaterials ? '追加中...' : '追加する'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isRebuildConfirmOpen && (
+                <div className="fixed inset-0 z-[81] bg-black/45 backdrop-blur-[1px] flex items-center justify-center px-4">
+                    <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl p-6 space-y-4">
+                        <h3 className="text-lg font-bold text-foreground">
+                            基本材料を再構築しますか？
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            現在の材料・メニュー・レシピは削除されます。続けて基本材料{BASIC_MATERIAL_TOTAL}件を再投入し、歩留まり未設定件数を検証します。
+                        </p>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsRebuildConfirmOpen(false)}
+                                disabled={isRebuildingMaterials}
+                            >
+                                キャンセル
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleRebuildBasicMaterials}
+                                disabled={isRebuildingMaterials}
+                            >
+                                {isRebuildingMaterials ? '再構築中...' : '再構築する'}
                             </Button>
                         </div>
                     </div>
