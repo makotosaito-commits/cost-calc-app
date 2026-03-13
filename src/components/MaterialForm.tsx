@@ -210,8 +210,8 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                 <CardTitle className="text-xl md:text-xl xl:text-lg">材料を登録</CardTitle>
                 <p className="text-xs text-muted-foreground">新しい仕入れ情報を入力してください。</p>
             </CardHeader>
-            <CardContent className="p-4 md:p-6 xl:p-4 pt-0">
-                <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5 xl:space-y-3">
+            <CardContent className="p-4 md:px-6 md:pt-0 md:pb-3 xl:px-4 xl:pt-0 xl:pb-2">
+                <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5 xl:space-y-2">
                     {statusMessage && (
                         <p
                             aria-live="polite"
