@@ -11,11 +11,73 @@ type SettingsPageProps = {
     currentUserEmail?: string | null;
 };
 
+type BasicMaterialSeed = {
+    name: string;
+    category: string;
+    unit: 'g' | 'ml' | '個';
+    yield_rate: number;
+};
+
+const BASIC_MATERIAL_SEEDS: BasicMaterialSeed[] = [
+    { name: '玉ねぎ', category: '野菜', unit: 'g', yield_rate: 90 },
+    { name: 'にんじん', category: '野菜', unit: 'g', yield_rate: 88 },
+    { name: 'キャベツ', category: '野菜', unit: 'g', yield_rate: 85 },
+    { name: 'レタス', category: '野菜', unit: 'g', yield_rate: 90 },
+    { name: 'トマト', category: '野菜', unit: 'g', yield_rate: 95 },
+    { name: 'きゅうり', category: '野菜', unit: 'g', yield_rate: 95 },
+    { name: 'じゃがいも', category: '野菜', unit: 'g', yield_rate: 80 },
+    { name: '長ねぎ', category: '野菜', unit: 'g', yield_rate: 85 },
+    { name: 'にんにく', category: '野菜', unit: 'g', yield_rate: 80 },
+    { name: 'しょうが', category: '野菜', unit: 'g', yield_rate: 90 },
+    { name: 'ピーマン', category: '野菜', unit: 'g', yield_rate: 90 },
+    { name: 'なす', category: '野菜', unit: 'g', yield_rate: 90 },
+    { name: '鶏もも肉', category: '肉', unit: 'g', yield_rate: 85 },
+    { name: '鶏むね肉', category: '肉', unit: 'g', yield_rate: 90 },
+    { name: '鶏ひき肉', category: '肉', unit: 'g', yield_rate: 100 },
+    { name: '豚肉', category: '肉', unit: 'g', yield_rate: 90 },
+    { name: '豚ひき肉', category: '肉', unit: 'g', yield_rate: 100 },
+    { name: '牛肉', category: '肉', unit: 'g', yield_rate: 90 },
+    { name: '牛ひき肉', category: '肉', unit: 'g', yield_rate: 100 },
+    { name: 'ベーコン', category: '肉', unit: 'g', yield_rate: 100 },
+    { name: '鮭', category: '魚', unit: 'g', yield_rate: 85 },
+    { name: 'まぐろ', category: '魚', unit: 'g', yield_rate: 95 },
+    { name: 'えび', category: '魚', unit: 'g', yield_rate: 50 },
+    { name: 'いか', category: '魚', unit: 'g', yield_rate: 85 },
+    { name: 'たこ', category: '魚', unit: 'g', yield_rate: 100 },
+    { name: 'ツナ', category: '魚', unit: 'g', yield_rate: 100 },
+    { name: 'しらす', category: '魚', unit: 'g', yield_rate: 100 },
+    { name: '卵', category: '卵・乳製品', unit: '個', yield_rate: 100 },
+    { name: '牛乳', category: '卵・乳製品', unit: 'ml', yield_rate: 100 },
+    { name: '生クリーム', category: '卵・乳製品', unit: 'ml', yield_rate: 100 },
+    { name: 'バター', category: '卵・乳製品', unit: 'g', yield_rate: 100 },
+    { name: 'チーズ', category: '卵・乳製品', unit: 'g', yield_rate: 100 },
+    { name: '米', category: '主食', unit: 'g', yield_rate: 100 },
+    { name: '食パン', category: '主食', unit: '個', yield_rate: 100 },
+    { name: 'パスタ', category: '主食', unit: 'g', yield_rate: 100 },
+    { name: '小麦粉', category: '粉類', unit: 'g', yield_rate: 100 },
+    { name: 'パン粉', category: '粉類', unit: 'g', yield_rate: 100 },
+    { name: '片栗粉', category: '粉類', unit: 'g', yield_rate: 100 },
+    { name: '塩', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: '砂糖', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: '醤油', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: '味噌', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: '酢', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: 'みりん', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: '料理酒', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: 'サラダ油', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: 'ごま油', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: 'マヨネーズ', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: 'ケチャップ', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: 'ウスターソース', category: '調味料', unit: 'ml', yield_rate: 100 },
+];
+
 export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
     const { settings, updateSettings, resetSettings } = useCostRateSettings();
     const [targetDraft, setTargetDraft] = useState(String(settings.targetCostRate));
     const [warnDraft, setWarnDraft] = useState(String(settings.warnCostRate));
     const [dangerDraft, setDangerDraft] = useState(String(settings.dangerCostRate));
+    const [isSeedConfirmOpen, setIsSeedConfirmOpen] = useState(false);
+    const [isSeedingMaterials, setIsSeedingMaterials] = useState(false);
 
     useEffect(() => {
         setTargetDraft(String(settings.targetCostRate));
@@ -97,6 +159,117 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
         }
     };
 
+    const hasMissingColumn = (errorMessage: string, columns: string[]) => {
+        const normalized = errorMessage.toLowerCase();
+        return columns.some((column) => normalized.includes(column.toLowerCase()));
+    };
+
+    const canRetryWithFallback = (errorMessage: string) => {
+        const normalized = errorMessage.toLowerCase();
+        return hasMissingColumn(errorMessage, ['unit', 'base_unit', 'yield_rate'])
+            || normalized.includes('null value in column "base_unit"')
+            || (normalized.includes('violates not-null constraint') && normalized.includes('base_unit'));
+    };
+
+    const handleSeedBasicMaterials = async () => {
+        if (isSeedingMaterials) return;
+        setIsSeedingMaterials(true);
+
+        try {
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (userError || !userData.user) {
+                alert('ログイン状態を確認できません。');
+                return;
+            }
+
+            const userId = userData.user.id;
+            const { data: existingMaterials, error: existingError } = await supabase
+                .from('materials')
+                .select('name')
+                .eq('user_id', userId);
+
+            if (existingError) {
+                alert(`既存材料の確認に失敗しました: ${existingError.message}`);
+                return;
+            }
+
+            const existingNames = new Set(
+                (existingMaterials ?? [])
+                    .map((row) => String(row.name ?? '').trim())
+                    .filter((name) => name.length > 0)
+            );
+
+            const materialsToInsert = BASIC_MATERIAL_SEEDS.filter(
+                (seed) => !existingNames.has(seed.name.trim())
+            );
+
+            if (materialsToInsert.length === 0) {
+                alert('追加できる基本の材料はありません。');
+                setIsSeedConfirmOpen(false);
+                return;
+            }
+
+            const createPayload = (mode: 'unit' | 'unit_with_base' | 'base', includeYieldRate: boolean) => (
+                materialsToInsert.map((seed) => {
+                    const row: Record<string, unknown> = {
+                        id: crypto.randomUUID(),
+                        user_id: userId,
+                        name: seed.name,
+                        category: seed.category,
+                    };
+
+                    if (mode === 'unit' || mode === 'unit_with_base') {
+                        row.unit = seed.unit;
+                    }
+                    if (mode === 'base' || mode === 'unit_with_base') {
+                        row.base_unit = seed.unit;
+                    }
+                    if (includeYieldRate) {
+                        row.yield_rate = seed.yield_rate;
+                    }
+
+                    return row;
+                })
+            );
+
+            const insertAttempts: Array<{ mode: 'unit' | 'unit_with_base' | 'base'; includeYieldRate: boolean }> = [
+                { mode: 'unit', includeYieldRate: true },
+                { mode: 'unit_with_base', includeYieldRate: true },
+                { mode: 'base', includeYieldRate: true },
+                { mode: 'unit', includeYieldRate: false },
+                { mode: 'unit_with_base', includeYieldRate: false },
+                { mode: 'base', includeYieldRate: false },
+            ];
+
+            let insertError: string | null = null;
+            for (const attempt of insertAttempts) {
+                const { error } = await supabase.from('materials').insert(createPayload(attempt.mode, attempt.includeYieldRate));
+                if (!error) {
+                    insertError = null;
+                    break;
+                }
+                insertError = error.message;
+                if (!canRetryWithFallback(error.message)) {
+                    break;
+                }
+            }
+
+            if (insertError) {
+                alert(`基本の材料追加に失敗しました: ${insertError}`);
+                return;
+            }
+
+            setIsSeedConfirmOpen(false);
+            if (materialsToInsert.length === BASIC_MATERIAL_SEEDS.length) {
+                alert('基本の材料を50件追加しました');
+            } else {
+                alert(`基本の材料を${materialsToInsert.length}件追加しました`);
+            }
+        } finally {
+            setIsSeedingMaterials(false);
+        }
+    };
+
     const handleLogout = async () => {
         const { error } = await supabase.auth.signOut();
         if (error) {
@@ -172,6 +345,21 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                     <Button variant="destructive" onClick={handleReset} className="w-full sm:w-auto font-bold uppercase tracking-wider px-8">
                         すべてのデータをリセット
                     </Button>
+
+                    <div className="mt-8 border-t border-border pt-6">
+                        <h3 className="text-base font-semibold text-foreground">基本の材料を追加</h3>
+                        <p className="text-sm text-muted-foreground mt-2">
+                            飲食店でよく使う基本の材料をまとめて登録します
+                        </p>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsSeedConfirmOpen(true)}
+                            className="mt-4 w-full sm:w-auto font-bold tracking-wider px-8"
+                            disabled={isSeedingMaterials}
+                        >
+                            材料を追加する
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -210,6 +398,34 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                 <p className="text-[10px] font-black uppercase tracking-[0.2em]">Cost Calculator App</p>
                 <p className="text-[10px] opacity-40">v1.0.0 • Professional Edition</p>
             </div>
+
+            {isSeedConfirmOpen && (
+                <div className="fixed inset-0 z-[80] bg-black/45 backdrop-blur-[1px] flex items-center justify-center px-4">
+                    <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl p-6 space-y-4">
+                        <h3 className="text-lg font-bold text-foreground">
+                            基本の材料（50件）を追加しますか？
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            価格と仕入数量は登録されません。あとで編集できます。
+                        </p>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsSeedConfirmOpen(false)}
+                                disabled={isSeedingMaterials}
+                            >
+                                キャンセル
+                            </Button>
+                            <Button
+                                onClick={handleSeedBasicMaterials}
+                                disabled={isSeedingMaterials}
+                            >
+                                {isSeedingMaterials ? '追加中...' : '追加する'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
