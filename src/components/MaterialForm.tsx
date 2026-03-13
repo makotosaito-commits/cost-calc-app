@@ -318,13 +318,13 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                                 </div>
                             </div>
                         )}
-                        <div className={`rounded-xl border border-border p-4 xl:p-2.5 transition-all duration-300 ${calculatedPrice !== null ? 'bg-background opacity-100' : 'bg-transparent opacity-30 select-none'}`}>
+                        <div className={`rounded-xl border border-border px-4 py-3 xl:px-2.5 xl:py-2 transition-all duration-300 ${calculatedPrice !== null ? 'bg-background opacity-100' : 'bg-transparent opacity-30 select-none'}`}>
                             <p className="text-center text-sm font-bold text-foreground">
                                 {calculatedPrice !== null ? Math.round(calculatedPrice).toLocaleString() : '0'} <span className="text-xs font-normal text-muted-foreground">円 / {normalizeInternalUnit(displayUnit)}</span>
                             </p>
                         </div>
                         {editingMaterial && (
-                            <p className="mt-2 xl:mt-1 text-[11px] xl:text-[9px] text-muted-foreground leading-tight">
+                            <p className="mt-2 xl:mt-1 text-xs xl:text-[9px] text-muted-foreground leading-[1.25]">
                                 これは保存前のプレビューです。反映するには「この内容で更新」を押してください。
                             </p>
                         )}
