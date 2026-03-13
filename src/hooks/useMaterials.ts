@@ -30,6 +30,57 @@ export const deleteMaterialWithRecipes = async (database: MaterialDeleteDb, id: 
     });
 };
 
+type YieldRateMergeRow = {
+    id?: unknown;
+    yield_rate?: unknown;
+};
+
+type ResolveMaterialYieldRateParams = {
+    rawYieldRate: unknown;
+    mergedYieldRate?: number | null;
+    purchasePrice: number;
+    purchaseQuantity: number;
+    calculatedUnitPrice: number;
+};
+
+export const buildYieldRateMap = (rows: YieldRateMergeRow[]) => {
+    const map = new Map<string, number | null>();
+    for (const row of rows) {
+        if (row.id === undefined || row.id === null) continue;
+        const materialId = String(row.id);
+        const normalizedYieldRate = row.yield_rate === null || row.yield_rate === undefined
+            ? null
+            : normalizeYieldRate(row.yield_rate);
+        map.set(materialId, normalizedYieldRate);
+    }
+    return map;
+};
+
+export const resolveMaterialYieldRate = ({
+    rawYieldRate,
+    mergedYieldRate,
+    purchasePrice,
+    purchaseQuantity,
+    calculatedUnitPrice,
+}: ResolveMaterialYieldRateParams) => {
+    const dbYieldRate = mergedYieldRate !== undefined
+        ? mergedYieldRate
+        : rawYieldRate === undefined
+            ? undefined
+            : (rawYieldRate === null ? null : normalizeYieldRate(rawYieldRate));
+
+    const inferredYieldRate = inferYieldRateFromUnitPrice(
+        purchasePrice,
+        purchaseQuantity,
+        calculatedUnitPrice
+    );
+
+    return {
+        yieldRate: dbYieldRate === undefined ? inferredYieldRate : dbYieldRate,
+        usedFallback: dbYieldRate === undefined,
+    };
+};
+
 export const useMaterials = (userId?: string | null) => {
     const [materials, setMaterials] = useState<Material[]>([]);
     const refetchTimerRef = useRef<number | null>(null);
@@ -65,22 +116,42 @@ export const useMaterials = (userId?: string | null) => {
             return;
         }
 
-        const selectAttempts = [
-            'id,name,category,purchase_price,purchase_quantity,base_unit,unit,purchase_display_quantity,purchase_display_unit,yield_rate,calculated_unit_price',
-            'id,name,category,purchase_price,purchase_quantity,base_unit,purchase_display_quantity,purchase_display_unit,yield_rate,calculated_unit_price',
-            'id,name,category,purchase_price,purchase_quantity,base_unit,unit,yield_rate,calculated_unit_price',
-            'id,name,category,purchase_price,purchase_quantity,base_unit,yield_rate,calculated_unit_price',
-            'id,name,category,purchase_price,purchase_quantity,base_unit,unit,calculated_unit_price',
-            'id,name,category,purchase_price,purchase_quantity,base_unit,calculated_unit_price',
+        const selectAttempts: Array<{ columns: string; includesYieldRate: boolean }> = [
+            {
+                columns: 'id,name,category,purchase_price,purchase_quantity,base_unit,unit,purchase_display_quantity,purchase_display_unit,yield_rate,calculated_unit_price',
+                includesYieldRate: true,
+            },
+            {
+                columns: 'id,name,category,purchase_price,purchase_quantity,base_unit,purchase_display_quantity,purchase_display_unit,yield_rate,calculated_unit_price',
+                includesYieldRate: true,
+            },
+            {
+                columns: 'id,name,category,purchase_price,purchase_quantity,base_unit,unit,yield_rate,calculated_unit_price',
+                includesYieldRate: true,
+            },
+            {
+                columns: 'id,name,category,purchase_price,purchase_quantity,base_unit,yield_rate,calculated_unit_price',
+                includesYieldRate: true,
+            },
+            {
+                columns: 'id,name,category,purchase_price,purchase_quantity,base_unit,unit,calculated_unit_price',
+                includesYieldRate: false,
+            },
+            {
+                columns: 'id,name,category,purchase_price,purchase_quantity,base_unit,calculated_unit_price',
+                includesYieldRate: false,
+            },
         ];
 
-        let result = await queryMaterials(selectAttempts[0], userId);
+        let selectedAttempt = selectAttempts[0];
+        let result = await queryMaterials(selectedAttempt.columns, userId);
         for (let i = 1; i < selectAttempts.length; i += 1) {
             if (!result.error) break;
             if (!hasMissingColumn(result.error.message, ['purchase_display_quantity', 'purchase_display_unit', 'yield_rate', 'unit'])) {
                 break;
             }
-            result = await queryMaterials(selectAttempts[i], userId);
+            selectedAttempt = selectAttempts[i];
+            result = await queryMaterials(selectedAttempt.columns, userId);
         }
 
         const { data, error } = result;
@@ -90,20 +161,53 @@ export const useMaterials = (userId?: string | null) => {
             return;
         }
 
-        const normalized: Material[] = (data ?? []).map((row) => {
+        const rows = data ?? [];
+        const yieldRateById = new Map<string, number | null>();
+        const shouldMergeYieldRates = !selectedAttempt.includesYieldRate
+            || rows.some((row) => !Object.prototype.hasOwnProperty.call(row, 'yield_rate'));
+
+        if (shouldMergeYieldRates) {
+            const yieldRateResult = await supabase
+                .from('materials')
+                .select('id,name,yield_rate')
+                .eq('user_id', userId);
+
+            if (yieldRateResult.error) {
+                console.warn('[useMaterials] Failed to load yield_rate via fallback merge:', yieldRateResult.error.message);
+            } else {
+                const mergedMap = buildYieldRateMap(yieldRateResult.data ?? []);
+                for (const [materialId, normalizedYieldRate] of mergedMap.entries()) {
+                    yieldRateById.set(materialId, normalizedYieldRate);
+                }
+            }
+        }
+
+        let unresolvedYieldRateCount = 0;
+
+        const normalized: Material[] = rows.map((row) => {
+            const materialId = String(row.id);
             const hasYieldRateColumn = Object.prototype.hasOwnProperty.call(row, 'yield_rate');
             const rawYieldRate = hasYieldRateColumn ? row.yield_rate : undefined;
             const purchasePrice = Number(row.purchase_price ?? 0);
             const purchaseQuantity = sanitizePurchaseQuantity(row.purchase_quantity);
             const calculatedUnitPrice = Number(row.calculated_unit_price ?? 0);
-            const inferredYieldRate = inferYieldRateFromUnitPrice(
+            const mergedYieldRate = yieldRateById.has(materialId)
+                ? yieldRateById.get(materialId)
+                : undefined;
+            const yieldResolution = resolveMaterialYieldRate({
+                rawYieldRate,
+                mergedYieldRate,
                 purchasePrice,
                 purchaseQuantity,
-                calculatedUnitPrice
-            );
+                calculatedUnitPrice,
+            });
+
+            if (yieldResolution.usedFallback) {
+                unresolvedYieldRateCount += 1;
+            }
 
             return {
-                id: String(row.id),
+                id: materialId,
                 name: String(row.name ?? ''),
                 category: String(row.category ?? ''),
                 purchase_price: purchasePrice,
@@ -116,12 +220,14 @@ export const useMaterials = (userId?: string | null) => {
                         return numeric > 0 ? numeric : null;
                     })(),
                 purchase_display_unit: sanitizeDisplayUnit(row.purchase_display_unit),
-                yield_rate: rawYieldRate === undefined
-                    ? inferredYieldRate
-                    : (rawYieldRate === null ? null : normalizeYieldRate(rawYieldRate)),
+                yield_rate: yieldResolution.yieldRate,
                 calculated_unit_price: calculatedUnitPrice,
             };
         });
+
+        if (unresolvedYieldRateCount > 0) {
+            console.warn(`[useMaterials] ${unresolvedYieldRateCount} materials resolved without DB yield_rate; fallback value applied.`);
+        }
 
         setMaterials(normalized);
     }, [userId]);
