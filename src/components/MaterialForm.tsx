@@ -303,7 +303,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                     <div className="space-y-1.5 xl:space-y-0.5">
                         <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">単位</label>
                         <SegmentedControl
-                            options={['g', 'kg', 'ml', '個']}
+                            options={['g', 'kg', 'ml', '個', '枚']}
                             value={displayUnit}
                             onChange={(value) => setDisplayUnit(value as InputUnit)}
                             className="w-full bg-background border border-border h-10 xl:h-8"

@@ -15,6 +15,7 @@ describe('materialUnits', () => {
             expect(sanitizeDisplayUnit('kg')).toBe('kg');
             expect(sanitizeDisplayUnit('ml')).toBe('ml');
             expect(sanitizeDisplayUnit('個')).toBe('個');
+            expect(sanitizeDisplayUnit('枚')).toBe('枚');
             expect(sanitizeDisplayUnit('L')).toBeNull();
             expect(sanitizeDisplayUnit('')).toBeNull();
         });
@@ -25,6 +26,7 @@ describe('materialUnits', () => {
             expect(sanitizeBaseUnit('g')).toBe('g');
             expect(sanitizeBaseUnit('ml')).toBe('ml');
             expect(sanitizeBaseUnit('個')).toBe('個');
+            expect(sanitizeBaseUnit('枚')).toBe('枚');
             expect(sanitizeBaseUnit('kg')).toBe('g');
             expect(sanitizeBaseUnit('unknown')).toBe('g');
             expect(sanitizeBaseUnit(null, 'ml')).toBe('ml');
@@ -43,6 +45,8 @@ describe('materialUnits', () => {
             expect(normalizePurchaseQuantity(250, 'ml')).toBe(250);
             expect(normalizeInternalUnit('個')).toBe('個');
             expect(normalizePurchaseQuantity(3, '個')).toBe(3);
+            expect(normalizeInternalUnit('枚')).toBe('枚');
+            expect(normalizePurchaseQuantity(2, '枚')).toBe(2);
         });
     });
 

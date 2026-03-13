@@ -1,5 +1,5 @@
-export type BaseUnit = 'g' | 'ml' | '個';
-export type InputUnit = 'g' | 'kg' | 'ml' | '個';
+export type BaseUnit = 'g' | 'ml' | '個' | '枚';
+export type InputUnit = 'g' | 'kg' | 'ml' | '個' | '枚';
 
 export interface Material {
     id: string;

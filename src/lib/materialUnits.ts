@@ -1,7 +1,7 @@
 import { toSafeNumber } from './calculator';
 import { BaseUnit, InputUnit, Material } from '../types';
 
-const INPUT_UNITS: InputUnit[] = ['g', 'kg', 'ml', '個'];
+const INPUT_UNITS: InputUnit[] = ['g', 'kg', 'ml', '個', '枚'];
 
 export const sanitizeDisplayUnit = (raw: unknown): InputUnit | null => {
     if (typeof raw !== 'string') return null;
@@ -14,7 +14,7 @@ export const sanitizeBaseUnit = (raw: unknown, legacyUnit?: unknown): BaseUnit =
     const fallback = typeof legacyUnit === 'string' ? legacyUnit.trim() : '';
     const candidate = primary || fallback;
 
-    if (candidate === 'g' || candidate === 'ml' || candidate === '個') return candidate;
+    if (candidate === 'g' || candidate === 'ml' || candidate === '個' || candidate === '枚') return candidate;
     if (candidate === 'kg') return 'g';
     return 'g';
 };

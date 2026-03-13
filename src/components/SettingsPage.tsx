@@ -14,7 +14,7 @@ type SettingsPageProps = {
 type BasicMaterialSeed = {
     name: string;
     category: string;
-    unit: 'g' | 'ml' | '個';
+    unit: 'g' | 'ml' | '個' | '枚';
     yield_rate: number;
 };
 
@@ -69,7 +69,71 @@ const BASIC_MATERIAL_SEEDS: BasicMaterialSeed[] = [
     { name: 'マヨネーズ', category: '調味料', unit: 'g', yield_rate: 100 },
     { name: 'ケチャップ', category: '調味料', unit: 'g', yield_rate: 100 },
     { name: 'ウスターソース', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: 'ほうれん草', category: '野菜', unit: 'g', yield_rate: 90 },
+    { name: '小松菜', category: '野菜', unit: 'g', yield_rate: 90 },
+    { name: '水菜', category: '野菜', unit: 'g', yield_rate: 95 },
+    { name: '白菜', category: '野菜', unit: 'g', yield_rate: 85 },
+    { name: '大根', category: '野菜', unit: 'g', yield_rate: 85 },
+    { name: 'かぼちゃ', category: '野菜', unit: 'g', yield_rate: 80 },
+    { name: 'ブロッコリー', category: '野菜', unit: 'g', yield_rate: 75 },
+    { name: 'カリフラワー', category: '野菜', unit: 'g', yield_rate: 75 },
+    { name: 'アスパラガス', category: '野菜', unit: 'g', yield_rate: 80 },
+    { name: 'セロリ', category: '野菜', unit: 'g', yield_rate: 85 },
+    { name: 'ズッキーニ', category: '野菜', unit: 'g', yield_rate: 90 },
+    { name: 'オクラ', category: '野菜', unit: 'g', yield_rate: 90 },
+    { name: 'とうもろこし', category: '野菜', unit: 'g', yield_rate: 70 },
+    { name: '枝豆', category: '野菜', unit: 'g', yield_rate: 60 },
+    { name: 'もやし', category: '野菜', unit: 'g', yield_rate: 95 },
+    { name: '春菊', category: '野菜', unit: 'g', yield_rate: 85 },
+    { name: 'パプリカ', category: '野菜', unit: 'g', yield_rate: 90 },
+    { name: 'しめじ', category: '野菜', unit: 'g', yield_rate: 100 },
+    { name: 'えのき', category: '野菜', unit: 'g', yield_rate: 100 },
+    { name: 'エリンギ', category: '野菜', unit: 'g', yield_rate: 100 },
+    { name: '豚バラ肉', category: '肉', unit: 'g', yield_rate: 90 },
+    { name: '豚ロース肉', category: '肉', unit: 'g', yield_rate: 90 },
+    { name: '鶏ささみ', category: '肉', unit: 'g', yield_rate: 95 },
+    { name: '鶏手羽先', category: '肉', unit: 'g', yield_rate: 80 },
+    { name: '鶏手羽元', category: '肉', unit: 'g', yield_rate: 85 },
+    { name: '合いびき肉', category: '肉', unit: 'g', yield_rate: 100 },
+    { name: 'ソーセージ', category: '肉', unit: 'g', yield_rate: 100 },
+    { name: 'ハム', category: '肉', unit: 'g', yield_rate: 100 },
+    { name: 'サバ', category: '魚', unit: 'g', yield_rate: 80 },
+    { name: 'アジ', category: '魚', unit: 'g', yield_rate: 80 },
+    { name: 'イワシ', category: '魚', unit: 'g', yield_rate: 75 },
+    { name: 'カツオ', category: '魚', unit: 'g', yield_rate: 85 },
+    { name: 'ホタテ', category: '魚', unit: 'g', yield_rate: 100 },
+    { name: 'あさり', category: '魚', unit: 'g', yield_rate: 30 },
+    { name: 'ムール貝', category: '魚', unit: 'g', yield_rate: 35 },
+    { name: 'カニ', category: '魚', unit: 'g', yield_rate: 40 },
+    { name: 'ヨーグルト', category: '卵・乳製品', unit: 'g', yield_rate: 100 },
+    { name: 'クリームチーズ', category: '卵・乳製品', unit: 'g', yield_rate: 100 },
+    { name: 'モッツァレラチーズ', category: '卵・乳製品', unit: 'g', yield_rate: 100 },
+    { name: '粉チーズ', category: '卵・乳製品', unit: 'g', yield_rate: 100 },
+    { name: 'うどん', category: '主食', unit: 'g', yield_rate: 100 },
+    { name: 'そば', category: '主食', unit: 'g', yield_rate: 100 },
+    { name: '中華麺', category: '主食', unit: 'g', yield_rate: 100 },
+    { name: '餃子の皮', category: '主食', unit: '枚', yield_rate: 100 },
+    { name: '春巻きの皮', category: '主食', unit: '枚', yield_rate: 100 },
+    { name: 'だし', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: '鶏ガラスープ', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: 'コンソメ', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: 'めんつゆ', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: 'ポン酢', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: 'オリーブオイル', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: 'ラー油', category: '調味料', unit: 'ml', yield_rate: 100 },
+    { name: '豆板醤', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: '甜麺醤', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: 'コチュジャン', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: 'カレールー', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: 'わさび', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: 'からし', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: 'ブラックペッパー', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: '白ごま', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: 'すりごま', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: '鰹節', category: '調味料', unit: 'g', yield_rate: 100 },
+    { name: '海苔', category: '調味料', unit: '枚', yield_rate: 100 },
 ];
+const BASIC_MATERIAL_TOTAL = BASIC_MATERIAL_SEEDS.length;
 
 export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
     const { settings, updateSettings, resetSettings } = useCostRateSettings();
@@ -199,9 +263,15 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                     .filter((name) => name.length > 0)
             );
 
-            const materialsToInsert = BASIC_MATERIAL_SEEDS.filter(
-                (seed) => !existingNames.has(seed.name.trim())
-            );
+            const seenNames = new Set(existingNames);
+            const materialsToInsert = BASIC_MATERIAL_SEEDS.filter((seed) => {
+                const normalizedName = seed.name.trim();
+                if (!normalizedName || seenNames.has(normalizedName)) {
+                    return false;
+                }
+                seenNames.add(normalizedName);
+                return true;
+            });
 
             if (materialsToInsert.length === 0) {
                 alert('追加できる基本の材料はありません。');
@@ -260,11 +330,7 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
             }
 
             setIsSeedConfirmOpen(false);
-            if (materialsToInsert.length === BASIC_MATERIAL_SEEDS.length) {
-                alert('基本の材料を50件追加しました');
-            } else {
-                alert(`基本の材料を${materialsToInsert.length}件追加しました`);
-            }
+            alert(`基本の材料を${materialsToInsert.length}件追加しました`);
         } finally {
             setIsSeedingMaterials(false);
         }
@@ -403,7 +469,7 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                 <div className="fixed inset-0 z-[80] bg-black/45 backdrop-blur-[1px] flex items-center justify-center px-4">
                     <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl p-6 space-y-4">
                         <h3 className="text-lg font-bold text-foreground">
-                            基本の材料（50件）を追加しますか？
+                            基本の材料（{BASIC_MATERIAL_TOTAL}件）を追加しますか？
                         </h3>
                         <p className="text-sm text-muted-foreground leading-relaxed">
                             価格と仕入数量は登録されません。あとで編集できます。
