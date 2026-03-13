@@ -127,7 +127,7 @@ export const MaterialList = memo(function MaterialList({ onEdit, materials, dele
     }
 
     return (
-        <div className="space-y-4 md:space-y-6 animate-in xl:flex xl:flex-col xl:min-h-0 xl:h-full">
+        <div className="space-y-4 md:space-y-6 animate-in xl:flex xl:flex-col xl:min-h-0">
             <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-foreground">登録済み材料</h3>
                 <span className="text-xs text-muted-foreground font-medium">{materials.length}件中 {filteredMaterials.length}件を表示</span>
@@ -218,10 +218,10 @@ export const MaterialList = memo(function MaterialList({ onEdit, materials, dele
                         })}
                     </div>
 
-                    <Card className="hidden md:block bg-card/50 border-border p-0 xl:flex-1 xl:min-h-0">
-                        <div className="overflow-x-auto xl:h-full xl:overflow-y-auto">
+                    <Card className="hidden md:block bg-card/50 border-border p-0">
+                        <div className="overflow-x-auto">
                             <Table>
-                                <TableHeader className="bg-background border-none xl:sticky xl:top-0 xl:z-10 xl:backdrop-blur-sm">
+                                <TableHeader className="bg-background border-none">
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="py-4">名前</TableHead>
                                         <TableHead>カテゴリ</TableHead>
