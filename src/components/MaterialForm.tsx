@@ -206,16 +206,16 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
 
     return (
         <Card className="w-full bg-card border-border shadow-xl overflow-visible">
-            <CardHeader className="p-4 md:p-6 xl:p-4 pb-3 md:pb-4 xl:pb-2.5">
+            <CardHeader className="p-4 md:p-6 xl:p-3 pb-3 md:pb-4 xl:pb-2">
                 <CardTitle className="text-xl md:text-xl xl:text-lg">材料を登録</CardTitle>
-                <p className="text-xs text-muted-foreground">新しい仕入れ情報を入力してください。</p>
+                <p className="text-xs xl:text-[11px] text-muted-foreground">新しい仕入れ情報を入力してください。</p>
             </CardHeader>
-            <CardContent className="p-4 md:px-6 md:pt-0 md:pb-3 xl:px-4 xl:pt-0 xl:pb-2">
-                <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5 xl:space-y-2">
+            <CardContent className="p-4 md:px-6 md:pt-0 md:pb-3 xl:px-3 xl:pt-0 xl:pb-1.5">
+                <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5 xl:space-y-1.5">
                     {statusMessage && (
                         <p
                             aria-live="polite"
-                            className={`rounded-lg border px-3 py-2 text-xs font-medium ${
+                            className={`rounded-lg border px-2.5 py-1.5 text-[11px] xl:text-[10px] font-medium leading-tight ${
                                 statusMessage.type === 'success'
                                     ? 'border-zinc-300 bg-zinc-50 text-zinc-700'
                                     : 'border-destructive/30 bg-destructive/10 text-destructive'
@@ -225,29 +225,29 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                         </p>
                     )}
 
-                    <div className="space-y-1.5 xl:space-y-1">
+                    <div className="space-y-1.5 xl:space-y-0.5">
                         <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">名前</label>
                         <Input
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="例: 豚肉, 牛乳, 卵..."
                             required
-                            className="bg-background border-border placeholder:text-muted-foreground/50 h-11 xl:h-9"
+                            className="bg-background border-border placeholder:text-muted-foreground/50 h-11 xl:h-8"
                         />
                     </div>
 
-                    <div className="space-y-1.5 xl:space-y-1">
+                    <div className="space-y-1.5 xl:space-y-0.5">
                         <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">カテゴリ</label>
                         <Input
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
                             placeholder="例: 肉類, 飲料..."
-                            className="bg-background border-border placeholder:text-muted-foreground/50 h-11 xl:h-9"
+                            className="bg-background border-border placeholder:text-muted-foreground/50 h-11 xl:h-8"
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 xl:gap-3">
-                        <div className="space-y-1.5 xl:space-y-1">
+                    <div className="grid grid-cols-2 gap-4 xl:gap-2">
+                        <div className="space-y-1.5 xl:space-y-0.5">
                             <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">仕入価格 (円)</label>
                             <Input
                                 type="number"
@@ -259,10 +259,10 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                                 placeholder="1000"
                                 required
                                 min="0"
-                                className="bg-background border-border h-11 xl:h-9"
+                                className="bg-background border-border h-11 xl:h-8"
                             />
                         </div>
-                        <div className="space-y-1.5 xl:space-y-1">
+                        <div className="space-y-1.5 xl:space-y-0.5">
                             <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">仕入数量</label>
                             <Input
                                 type="number"
@@ -275,12 +275,12 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                                 required
                                 step="any"
                                 min="0"
-                                className="bg-background border-border h-11 xl:h-9"
+                                className="bg-background border-border h-11 xl:h-8"
                             />
                         </div>
                     </div>
 
-                    <div className="space-y-1.5 xl:space-y-1">
+                    <div className="space-y-1.5 xl:space-y-0.5">
                         <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">歩留まり（%）</label>
                         <Input
                             type="number"
@@ -293,24 +293,24 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                             step="any"
                             min="0.01"
                             max="100"
-                            className="bg-background border-border h-11 xl:h-9"
+                            className="bg-background border-border h-11 xl:h-8"
                         />
-                        <p className="text-xs xl:text-[10px] text-muted-foreground pl-1 leading-tight xl:whitespace-nowrap">
+                        <p className="text-xs xl:text-[9px] text-muted-foreground pl-1 leading-tight xl:whitespace-nowrap">
                             任意入力。未入力は100%で計算します。
                         </p>
                     </div>
 
-                    <div className="space-y-1.5 xl:space-y-1">
+                    <div className="space-y-1.5 xl:space-y-0.5">
                         <label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">単位</label>
                         <SegmentedControl
                             options={['g', 'kg', 'ml', '個']}
                             value={displayUnit}
                             onChange={(value) => setDisplayUnit(value as InputUnit)}
-                            className="w-full bg-background border border-border h-10 xl:h-9"
+                            className="w-full bg-background border border-border h-10 xl:h-8"
                         />
                     </div>
 
-                    <div className="relative pt-4 xl:pt-2 overflow-visible">
+                    <div className="relative pt-4 xl:pt-1.5 overflow-visible">
                         {calculatedPrice !== null && (
                             <div className="absolute -top-2 right-0 left-0 flex justify-center pointer-events-none">
                                 <div className="bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-full shadow-lg translate-y-[-50%]">
@@ -318,32 +318,32 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                                 </div>
                             </div>
                         )}
-                        <div className={`rounded-xl border border-border p-4 xl:p-3 transition-all duration-300 ${calculatedPrice !== null ? 'bg-background opacity-100' : 'bg-transparent opacity-30 select-none'}`}>
+                        <div className={`rounded-xl border border-border p-4 xl:p-2.5 transition-all duration-300 ${calculatedPrice !== null ? 'bg-background opacity-100' : 'bg-transparent opacity-30 select-none'}`}>
                             <p className="text-center text-sm font-bold text-foreground">
                                 {calculatedPrice !== null ? Math.round(calculatedPrice).toLocaleString() : '0'} <span className="text-xs font-normal text-muted-foreground">円 / {normalizeInternalUnit(displayUnit)}</span>
                             </p>
                         </div>
                         {editingMaterial && (
-                            <p className="mt-2 xl:mt-1.5 text-[11px] xl:text-[10px] text-muted-foreground leading-snug">
+                            <p className="mt-2 xl:mt-1 text-[11px] xl:text-[9px] text-muted-foreground leading-tight">
                                 これは保存前のプレビューです。反映するには「この内容で更新」を押してください。
                             </p>
                         )}
                     </div>
 
                     {editingMaterial ? (
-                        <div className="grid grid-cols-2 gap-3 xl:gap-2">
+                        <div className="grid grid-cols-2 gap-3 xl:gap-1.5">
                             <Button
                                 type="button"
                                 variant="secondary"
                                 onClick={handleCancelEdit}
-                                className="w-full font-black uppercase tracking-widest h-12 xl:h-10"
+                                className="w-full font-black uppercase tracking-widest h-12 xl:h-9"
                             >
                                 編集をキャンセル
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={!isDirty}
-                                className={`w-full font-black uppercase tracking-widest h-12 xl:h-10 transition-all ${
+                                className={`w-full font-black uppercase tracking-widest h-12 xl:h-9 transition-all ${
                                     isDirty ? 'ring-2 ring-zinc-900/60 shadow-lg' : ''
                                 }`}
                             >
@@ -351,7 +351,7 @@ export const MaterialForm = ({ editingMaterial, onFinishEdit, addMaterial, updat
                             </Button>
                         </div>
                     ) : (
-                        <Button type="submit" className="w-full font-black uppercase tracking-widest h-12 xl:h-10">
+                        <Button type="submit" className="w-full font-black uppercase tracking-widest h-12 xl:h-9">
                             この内容で登録
                         </Button>
                     )}
