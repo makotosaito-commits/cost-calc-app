@@ -18,21 +18,6 @@ type BasicMaterialSeed = {
     yield_rate: number;
 };
 
-type RebuildResult = {
-    insertedCount: number;
-    totalCount: number;
-    missingYieldCount: number;
-    completedAt: string;
-};
-
-type YieldSyncResult = {
-    matchedCount: number;
-    updatedCount: number;
-    unchangedCount: number;
-    errorCount: number;
-    completedAt: string;
-};
-
 const BASIC_MATERIAL_SEEDS: BasicMaterialSeed[] = [
     { name: '玉ねぎ', category: '野菜', unit: 'g', yield_rate: 90 },
     { name: 'にんじん', category: '野菜', unit: 'g', yield_rate: 88 },
@@ -244,11 +229,6 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
     const [dangerDraft, setDangerDraft] = useState(String(settings.dangerCostRate));
     const [isSeedConfirmOpen, setIsSeedConfirmOpen] = useState(false);
     const [isSeedingMaterials, setIsSeedingMaterials] = useState(false);
-    const [isRebuildConfirmOpen, setIsRebuildConfirmOpen] = useState(false);
-    const [isRebuildingMaterials, setIsRebuildingMaterials] = useState(false);
-    const [isSyncingYieldRates, setIsSyncingYieldRates] = useState(false);
-    const [rebuildResult, setRebuildResult] = useState<RebuildResult | null>(null);
-    const [yieldSyncResult, setYieldSyncResult] = useState<YieldSyncResult | null>(null);
 
     useEffect(() => {
         setTargetDraft(String(settings.targetCostRate));
@@ -394,31 +374,6 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
         }
     };
 
-    const countMaterialsByUser = async (userId: string) => {
-        const { count, error } = await supabase
-            .from('materials')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', userId);
-
-        if (error) {
-            throw new Error(`材料件数の取得に失敗しました: ${error.message}`);
-        }
-        return count ?? 0;
-    };
-
-    const countMissingYieldRate = async (userId: string) => {
-        const { count, error } = await supabase
-            .from('materials')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .is('yield_rate', null);
-
-        if (error) {
-            throw new Error(`歩留まり未設定件数の取得に失敗しました: ${error.message}`);
-        }
-        return count ?? 0;
-    };
-
     const handleReset = async () => {
         if (!confirm('本当にすべてのデータを削除しますか？この操作は取り消せません。')) {
             return;
@@ -427,8 +382,6 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
         try {
             const userId = await getCurrentUserId();
             await resetUserData(userId);
-            setRebuildResult(null);
-            setYieldSyncResult(null);
             alert('データを初期化しました。');
         } catch (error) {
             alert(error instanceof Error ? error.message : 'データ初期化に失敗しました。');
@@ -483,146 +436,6 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
         }
     };
 
-    const handleRebuildBasicMaterials = async () => {
-        if (isRebuildingMaterials) return;
-        setIsRebuildingMaterials(true);
-
-        try {
-            const userId = await getCurrentUserId();
-
-            await resetUserData(userId);
-            await insertBasicMaterials(userId, BASIC_MATERIAL_SEEDS);
-
-            const [totalCount, missingYieldCount] = await Promise.all([
-                countMaterialsByUser(userId),
-                countMissingYieldRate(userId),
-            ]);
-
-            const result: RebuildResult = {
-                insertedCount: BASIC_MATERIAL_TOTAL,
-                totalCount,
-                missingYieldCount,
-                completedAt: new Date().toLocaleString('ja-JP'),
-            };
-            setRebuildResult(result);
-            setYieldSyncResult(null);
-            setIsRebuildConfirmOpen(false);
-
-            if (missingYieldCount === 0) {
-                alert(`再構築が完了しました。${totalCount}件中、歩留まり未設定は0件です。`);
-            } else {
-                alert(`再構築は完了しましたが、歩留まり未設定が${missingYieldCount}件あります。設定画面の結果を確認してください。`);
-            }
-        } catch (error) {
-            alert(error instanceof Error ? error.message : '再構築に失敗しました。');
-        } finally {
-            setIsRebuildingMaterials(false);
-        }
-    };
-
-    const handleSyncTemplateYieldRates = async () => {
-        if (isSyncingYieldRates) return;
-        if (!window.confirm('テンプレ歩留まりを反映しますか？\nname一致の材料の yield_rate のみ更新します。\n価格・数量・単位・カテゴリは変更しません。')) {
-            return;
-        }
-
-        setIsSyncingYieldRates(true);
-
-        try {
-            const userId = await getCurrentUserId();
-            const yieldRateByName = new Map(
-                BASIC_MATERIAL_SEEDS.map((seed) => [seed.name.trim(), seed.yield_rate])
-            );
-
-            const { data: rows, error } = await supabase
-                .from('materials')
-                .select('id,name,yield_rate')
-                .eq('user_id', userId);
-
-            if (error) {
-                throw new Error(`材料取得に失敗しました: ${error.message}`);
-            }
-
-            const allRows = rows ?? [];
-            const matchedRows = allRows
-                .map((row) => {
-                    const normalizedName = String(row.name ?? '').trim();
-                    const templateYieldRate = yieldRateByName.get(normalizedName);
-                    if (!normalizedName || templateYieldRate === undefined) return null;
-                    const currentYieldRate = row.yield_rate === null || row.yield_rate === undefined
-                        ? 100
-                        : Number(row.yield_rate);
-
-                    return {
-                        id: String(row.id),
-                        name: normalizedName,
-                        currentYieldRate,
-                        templateYieldRate,
-                    };
-                })
-                .filter((row): row is { id: string; name: string; currentYieldRate: number; templateYieldRate: number } => row !== null);
-
-            const updateTargets = matchedRows.filter((row) => row.currentYieldRate !== row.templateYieldRate);
-            const unchangedCount = matchedRows.length - updateTargets.length;
-            let updatedCount = 0;
-            let errorCount = 0;
-
-            for (const target of updateTargets) {
-                const { error: updateError } = await supabase
-                    .from('materials')
-                    .update({ yield_rate: target.templateYieldRate })
-                    .eq('id', target.id)
-                    .eq('user_id', userId);
-
-                if (updateError) {
-                    errorCount += 1;
-                    console.error(`yield_rate 更新失敗: ${target.name}`, updateError.message);
-                    continue;
-                }
-                updatedCount += 1;
-            }
-
-            const updatedNames = [...new Set(updateTargets.map((row) => row.name))];
-            if (updatedNames.length > 0) {
-                const { data: verifiedRows, error: verifyError } = await supabase
-                    .from('materials')
-                    .select('name,yield_rate')
-                    .eq('user_id', userId)
-                    .in('name', updatedNames)
-                    .order('name', { ascending: true });
-
-                if (verifyError) {
-                    console.error('更新後検証の取得に失敗しました:', verifyError.message);
-                } else {
-                    console.log('テンプレ歩留まり反映後の確認結果');
-                    console.table(
-                        (verifiedRows ?? []).map((row) => ({
-                            name: row.name,
-                            yield_rate: row.yield_rate,
-                        }))
-                    );
-                }
-            } else {
-                console.log('テンプレ歩留まり反映: 更新対象はありませんでした。');
-            }
-
-            const result: YieldSyncResult = {
-                matchedCount: matchedRows.length,
-                updatedCount,
-                unchangedCount,
-                errorCount,
-                completedAt: new Date().toLocaleString('ja-JP'),
-            };
-            setYieldSyncResult(result);
-
-            alert(`テンプレ歩留まり反映が完了しました。対象: ${result.matchedCount}件 / 更新: ${result.updatedCount}件 / 変更不要: ${result.unchangedCount}件 / エラー: ${result.errorCount}件`);
-        } catch (syncError) {
-            alert(syncError instanceof Error ? syncError.message : 'テンプレ歩留まり反映に失敗しました。');
-        } finally {
-            setIsSyncingYieldRates(false);
-        }
-    };
-
     const handleLogout = async () => {
         const { error } = await supabase.auth.signOut();
         if (error) {
@@ -634,7 +447,7 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
         <div className="max-w-2xl mx-auto space-y-8 animate-in">
             <div>
                 <h2 className="text-3xl font-extrabold tracking-tight text-foreground">設定</h2>
-                <p className="text-muted-foreground mt-1">アプリケーションの管理と設定を行います。</p>
+                <p className="text-muted-foreground mt-1">アプリで使う基本設定を変更できます。</p>
             </div>
 
             <Card className="bg-card border-border shadow-xl">
@@ -699,7 +512,7 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                         variant="destructive"
                         onClick={handleReset}
                         className="w-full sm:w-auto font-bold uppercase tracking-wider px-8"
-                        disabled={isSeedingMaterials || isRebuildingMaterials || isSyncingYieldRates}
+                        disabled={isSeedingMaterials}
                     >
                         すべてのデータをリセット
                     </Button>
@@ -713,64 +526,11 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                             variant="outline"
                             onClick={() => setIsSeedConfirmOpen(true)}
                             className="mt-4 w-full sm:w-auto font-bold tracking-wider px-8"
-                            disabled={isSeedingMaterials || isRebuildingMaterials || isSyncingYieldRates}
+                            disabled={isSeedingMaterials}
                         >
                             材料を追加する
                         </Button>
                     </div>
-
-                    <div className="mt-6 border-t border-border pt-6">
-                        <h3 className="text-base font-semibold text-foreground">テンプレ歩留まりを反映</h3>
-                        <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                            基本材料テンプレと name が一致する材料の yield_rate のみを更新します。
-                            価格・数量・単位・カテゴリは変更しません。
-                        </p>
-                        <Button
-                            variant="outline"
-                            onClick={handleSyncTemplateYieldRates}
-                            className="mt-4 w-full sm:w-auto font-bold tracking-wider px-8"
-                            disabled={isSeedingMaterials || isRebuildingMaterials || isSyncingYieldRates}
-                        >
-                            {isSyncingYieldRates ? '反映中...' : 'テンプレ歩留まりを反映する'}
-                        </Button>
-                    </div>
-
-                    <div className="mt-6 border-t border-border pt-6">
-                        <h3 className="text-base font-semibold text-foreground">基本材料を再構築（リセット＋200件再投入）</h3>
-                        <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                            テストデータを想定し、現在の材料・メニュー・レシピを削除後、基本材料200件を再投入します。
-                            再投入後に歩留まり未設定件数を自動検証します。
-                        </p>
-                        <Button
-                            variant="destructive"
-                            onClick={() => setIsRebuildConfirmOpen(true)}
-                            className="mt-4 w-full sm:w-auto font-bold tracking-wider px-8"
-                            disabled={isSeedingMaterials || isRebuildingMaterials || isSyncingYieldRates}
-                        >
-                            {isRebuildingMaterials ? '再構築中...' : '再構築を実行する'}
-                        </Button>
-                    </div>
-
-                    {yieldSyncResult && (
-                        <div className="mt-6 rounded-xl border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground space-y-1.5">
-                            <p className="font-semibold text-foreground">テンプレ歩留まり反映結果</p>
-                            <p>対象: <span className="font-medium text-foreground">{yieldSyncResult.matchedCount}件</span></p>
-                            <p>更新: <span className="font-medium text-foreground">{yieldSyncResult.updatedCount}件</span></p>
-                            <p>変更不要: <span className="font-medium text-foreground">{yieldSyncResult.unchangedCount}件</span></p>
-                            <p>エラー: <span className={`font-medium ${yieldSyncResult.errorCount === 0 ? 'text-foreground' : 'text-destructive'}`}>{yieldSyncResult.errorCount}件</span></p>
-                            <p>完了時刻: <span className="font-medium text-foreground">{yieldSyncResult.completedAt}</span></p>
-                        </div>
-                    )}
-
-                    {rebuildResult && (
-                        <div className="mt-6 rounded-xl border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground space-y-1.5">
-                            <p className="font-semibold text-foreground">再構築結果</p>
-                            <p>投入件数: <span className="font-medium text-foreground">{rebuildResult.insertedCount}件</span></p>
-                            <p>登録済み材料: <span className="font-medium text-foreground">{rebuildResult.totalCount}件</span></p>
-                            <p>歩留まり未設定: <span className={`font-medium ${rebuildResult.missingYieldCount === 0 ? 'text-foreground' : 'text-destructive'}`}>{rebuildResult.missingYieldCount}件</span></p>
-                            <p>完了時刻: <span className="font-medium text-foreground">{rebuildResult.completedAt}</span></p>
-                        </div>
-                    )}
                 </CardContent>
             </Card>
 
@@ -823,44 +583,15 @@ export const SettingsPage = ({ currentUserEmail }: SettingsPageProps) => {
                             <Button
                                 variant="outline"
                                 onClick={() => setIsSeedConfirmOpen(false)}
-                                disabled={isSeedingMaterials || isSyncingYieldRates}
+                                disabled={isSeedingMaterials}
                             >
                                 キャンセル
                             </Button>
                             <Button
                                 onClick={handleSeedBasicMaterials}
-                                disabled={isSeedingMaterials || isSyncingYieldRates}
+                                disabled={isSeedingMaterials}
                             >
                                 {isSeedingMaterials ? '追加中...' : '追加する'}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {isRebuildConfirmOpen && (
-                <div className="fixed inset-0 z-[81] bg-black/45 backdrop-blur-[1px] flex items-center justify-center px-4">
-                    <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl p-6 space-y-4">
-                        <h3 className="text-lg font-bold text-foreground">
-                            基本材料を再構築しますか？
-                        </h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                            現在の材料・メニュー・レシピは削除されます。続けて基本材料{BASIC_MATERIAL_TOTAL}件を再投入し、歩留まり未設定件数を検証します。
-                        </p>
-                        <div className="flex justify-end gap-2 pt-2">
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsRebuildConfirmOpen(false)}
-                                disabled={isRebuildingMaterials || isSyncingYieldRates}
-                            >
-                                キャンセル
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={handleRebuildBasicMaterials}
-                                disabled={isRebuildingMaterials || isSyncingYieldRates}
-                            >
-                                {isRebuildingMaterials ? '再構築中...' : '再構築する'}
                             </Button>
                         </div>
                     </div>
