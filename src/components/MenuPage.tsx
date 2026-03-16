@@ -15,11 +15,12 @@ type MenuPageProps = {
     userId: string;
     addMenu: (menu: Omit<Menu, 'id' | 'user_id'>) => Promise<void>;
     updateMenu: (id: string, changes: Partial<Menu>) => Promise<void>;
+    updateMaterial: (id: string, changes: Partial<Material>) => Promise<void>;
     deleteMenu: (id: string) => Promise<void>;
     materials: Material[];
 };
 
-export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, materials }: MenuPageProps) => {
+export const MenuPage = ({ menus, userId, addMenu, updateMenu, updateMaterial, deleteMenu, materials }: MenuPageProps) => {
     const { settings } = useCostRateSettings();
     const { hasUnsavedMenuChanges, setHasUnsavedMenuChanges } = useUnsavedChanges();
     const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
@@ -272,6 +273,8 @@ export const MenuPage = ({ menus, userId, addMenu, updateMenu, deleteMenu, mater
                         menuId={selectedMenu.id}
                         userId={userId}
                         materials={materials}
+                        updateMaterial={updateMaterial}
+                        onNotify={showToast}
                         onTotalCostChange={handleTotalCostChange}
                     />
                 </div>

@@ -177,6 +177,7 @@ function App() {
                                 userId={authenticatedUserId}
                                 addMenu={addMenu}
                                 updateMenu={updateMenu}
+                                updateMaterial={updateMaterial}
                                 deleteMenu={deleteMenu}
                                 materials={materials}
                             />
